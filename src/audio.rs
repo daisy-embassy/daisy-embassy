@@ -1,12 +1,13 @@
 use crate::codec::{Codec, Pins as CodecPins};
-use defmt::info;
-use defmt::unwrap;
+use defmt::{info, unwrap};
 use embassy_stm32 as hal;
+#[cfg(feature = "seed_1_1")]
 use embassy_time::Timer;
 use grounded::uninit::GroundedArrayCell;
 use hal::sai::FifoThreshold;
 use hal::sai::FrameSyncOffset;
 use hal::sai::{BitOrder, SyncInput};
+#[allow(unused_imports)]
 use hal::{
     peripherals,
     sai::{
@@ -18,6 +19,7 @@ use hal::{
 
 // - global constants ---------------------------------------------------------
 
+#[cfg(feature = "seed_1_1")]
 const I2C_FS: Hertz = Hertz(100_000);
 pub const BLOCK_LENGTH: usize = 32; // 32 samples
 pub const HALF_DMA_BUFFER_LENGTH: usize = BLOCK_LENGTH * 2; //  2 channels
@@ -115,6 +117,8 @@ impl AudioPeripherals {
             rx_buffer,
             sai_rx_config,
         );
+
+        #[allow(unused_mut)]
         let mut interface = Interface {
             sai_rx_config,
             sai_tx_config,
