@@ -39,7 +39,6 @@ pub struct AudioPeripherals {
     pub codec_pins: CodecPins,
     pub sai1: hal::peripherals::SAI1,
     pub i2c2: hal::peripherals::I2C2,
-    pub dma1_ch0: hal::peripherals::DMA1_CH0,
     pub dma1_ch1: hal::peripherals::DMA1_CH1,
     pub dma1_ch2: hal::peripherals::DMA1_CH2,
 }
@@ -105,7 +104,7 @@ impl AudioPeripherals {
             self.codec_pins.SD_A,
             self.codec_pins.FS_A,
             self.codec_pins.MCLK_A,
-            self.dma1_ch0,
+            self.dma1_ch2,
             tx_buffer,
             sai_tx_config,
         );
