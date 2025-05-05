@@ -1,3 +1,6 @@
+use core::convert::Infallible;
+use core::marker::PhantomData;
+
 use crate::codec::{Codec, Pins as CodecPins};
 use defmt::info;
 use defmt::unwrap;
@@ -15,9 +18,6 @@ use hal::{
         TxRx,
     },
 };
-
-#[cfg(not(feature = "panic_on_overrun"))]
-use defmt::error;
 
 // - global constants ---------------------------------------------------------
 
@@ -49,7 +49,7 @@ pub struct AudioPeripherals {
 }
 
 impl AudioPeripherals {
-    pub async fn prepare_interface<'a>(self, audio_config: AudioConfig) -> Interface<'a> {
+    pub async fn prepare_interface<'a>(self, audio_config: AudioConfig) -> Interface<'a, Idle> {
         #[cfg(feature = "seed_1_1")]
         {
             info!("set up i2c");
@@ -125,6 +125,7 @@ impl AudioPeripherals {
                 sai_rx,
                 sai_tx,
                 i2c: Some(i2c),
+                _state: PhantomData,
             }
         }
 
@@ -189,63 +190,53 @@ impl AudioPeripherals {
                 sai_rx,
                 sai_tx,
                 i2c: None, // pcm3060 'hardware mode' doesn't need i2c
+                _state: PhantomData,
             }
         }
     }
 }
 
-pub struct Interface<'a> {
+pub struct Idle {}
+pub struct Running {}
+pub trait InterfaceState {}
+impl InterfaceState for Idle {}
+impl InterfaceState for Running {}
+
+pub struct Interface<'a, S: InterfaceState> {
     sai_tx_config: sai::Config,
     sai_rx_config: sai::Config,
     sai_tx: Sai<'a, peripherals::SAI1, u32>,
     sai_rx: Sai<'a, peripherals::SAI1, u32>,
     i2c: Option<hal::i2c::I2c<'a, hal::mode::Blocking>>,
+    _state: PhantomData<S>,
 }
 
-impl<'a> Interface<'a> {
-    pub async fn start(&mut self, mut callback: impl FnMut(&[u32], &mut [u32])) -> ! {
-        unwrap!(self.setup().await);
-        info!("enter audio callback loop");
-        let mut write_buf = [0; HALF_DMA_BUFFER_LENGTH];
-        let mut read_buf = [0; HALF_DMA_BUFFER_LENGTH];
-        loop {
-            #[cfg(not(feature = "panic_on_overrun"))]
-            unwrap!(self.sai_rx.read(&mut read_buf).await.or_else(|e| {
-                match e {
-                    sai::Error::Overrun => {
-                        error!("Overrun on audio buffer read");
-                        Ok(())
-                    }
-                    e => Err(e),
-                }
-            }));
+impl<'a> Interface<'a, Idle> {
+    pub async fn start_interface(mut self) -> Result<Interface<'a, Running>, sai::Error> {
+        self.setup().await?;
+        Ok(Interface {
+            sai_tx_config: self.sai_tx_config,
+            sai_rx_config: self.sai_rx_config,
+            sai_tx: self.sai_tx,
+            sai_rx: self.sai_rx,
+            i2c: self.i2c,
+            _state: PhantomData,
+        })
+    }
 
-            #[cfg(feature = "panic_on_overrun")]
-            unwrap!(self.sai_rx.read(&mut read_buf).await);
-
-            callback(&read_buf, &mut write_buf);
-
-            #[cfg(not(feature = "panic_on_overrun"))]
-            unwrap!(self.sai_tx.write(&write_buf).await.or_else(|e| {
-                match e {
-                    sai::Error::Overrun => {
-                        error!("Overrun on audio buffer write");
-                        Ok(())
-                    }
-                    e => Err(e),
-                }
-            }));
-
-            #[cfg(feature = "panic_on_overrun")]
-            unwrap!(self.sai_tx.write(&write_buf).await);
+    async fn setup(&mut self) -> Result<(), sai::Error> {
+        #[cfg(feature = "seed_1_1")]
+        {
+            info!("setup WM8731");
+            Codec::write_wm8731_reg(
+                self.i2c.as_mut().unwrap(),
+                wm8731::WM8731::power_down(Codec::final_power_settings),
+            );
+            embassy_time::Timer::after_micros(10).await;
         }
-    }
-    pub fn sai_rx_config(&self) -> &sai::Config {
-        &self.sai_rx_config
-    }
 
-    pub fn sai_tx_config(&self) -> &sai::Config {
-        &self.sai_tx_config
+        info!("start SAI");
+        self.sai_rx.start()
     }
 
     // returns (sai_tx, sai_rx, i2c)
@@ -262,20 +253,31 @@ impl<'a> Interface<'a> {
         self.setup().await?;
         Ok((self.sai_tx, self.sai_rx, unwrap!(self.i2c)))
     }
+}
 
-    async fn setup(&mut self) -> Result<(), sai::Error> {
-        #[cfg(feature = "seed_1_1")]
-        {
-            info!("setup WM8731");
-            Codec::write_wm8731_reg(
-                self.i2c.as_mut().unwrap(),
-                wm8731::WM8731::power_down(Codec::final_power_settings),
-            );
-            embassy_time::Timer::after_micros(10).await;
+impl Interface<'_, Running> {
+    pub async fn start_callback(
+        &mut self,
+        mut callback: impl FnMut(&[u32], &mut [u32]),
+    ) -> Result<Infallible, sai::Error> {
+        info!("enter audio callback loop");
+        let mut write_buf = [0; HALF_DMA_BUFFER_LENGTH];
+        let mut read_buf = [0; HALF_DMA_BUFFER_LENGTH];
+        loop {
+            self.sai_rx.read(&mut read_buf).await?;
+            callback(&read_buf, &mut write_buf);
+            self.sai_tx.read(&mut write_buf).await?;
         }
+    }
+}
 
-        info!("start SAI");
-        self.sai_rx.start()
+impl<S: InterfaceState> Interface<'_, S> {
+    pub fn sai_rx_config(&self) -> &sai::Config {
+        &self.sai_rx_config
+    }
+
+    pub fn sai_tx_config(&self) -> &sai::Config {
+        &self.sai_tx_config
     }
 }
 
