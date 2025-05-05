@@ -6,10 +6,10 @@
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use daisy_embassy::audio::Interface;
+use daisy_embassy::audio::{Idle, Interface};
 use daisy_embassy::sdram::FmcDevice;
 use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, hal, new_daisy_board, sdram::SDRAM_SIZE};
-use defmt::{debug, info};
+use defmt::{debug, info, unwrap};
 use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_stm32::fmc::Fmc;
 use embassy_stm32::interrupt;
@@ -33,7 +33,7 @@ unsafe fn SAI1() {
 
 #[embassy_executor::task]
 async fn run_audio(
-    mut interface: Interface<'static>,
+    interface: Interface<'static, Idle>,
     mut sdram: Sdram<Fmc<'static, FMC>, FmcDevice>,
 ) {
     let mut delay = Delay;
@@ -56,33 +56,36 @@ async fn run_audio(
     let mut rp = 0;
     //playback point
     let mut pp = 0;
-    interface
-        .start(|input, output| {
-            // if triggered record, record incoming buffer till the loop buffer is full
-            if RECORD.load(Ordering::SeqCst) {
-                let remain = BL.min(LOOPER_LENGTH - rp);
-                loop_buffer[rp..(rp + remain)].copy_from_slice(input);
-                rp += BL;
-                if rp >= LOOPER_LENGTH {
-                    rp = 0;
-                    RECORD.store(false, Ordering::SeqCst);
-                    info!("finished recording");
+    let mut interface = unwrap!(interface.start_interface().await);
+    unwrap!(
+        interface
+            .start_callback(|input, output| {
+                // if triggered record, record incoming buffer till the loop buffer is full
+                if RECORD.load(Ordering::SeqCst) {
+                    let remain = BL.min(LOOPER_LENGTH - rp);
+                    loop_buffer[rp..(rp + remain)].copy_from_slice(input);
+                    rp += BL;
+                    if rp >= LOOPER_LENGTH {
+                        rp = 0;
+                        RECORD.store(false, Ordering::SeqCst);
+                        info!("finished recording");
+                    }
                 }
-            }
 
-            let remain = BL.min(LOOPER_LENGTH - pp);
-            let frac = BL - remain;
-            output.copy_from_slice(&loop_buffer[pp..(pp + remain)]);
-            if frac > 0 {
-                output[remain..BL].copy_from_slice(&loop_buffer[0..frac]);
-            }
-            pp += BL;
-            if pp >= LOOPER_LENGTH {
-                pp -= LOOPER_LENGTH;
-                info!("loop!!");
-            }
-        })
-        .await;
+                let remain = BL.min(LOOPER_LENGTH - pp);
+                let frac = BL - remain;
+                output.copy_from_slice(&loop_buffer[pp..(pp + remain)]);
+                if frac > 0 {
+                    output[remain..BL].copy_from_slice(&loop_buffer[0..frac]);
+                }
+                pp += BL;
+                if pp >= LOOPER_LENGTH {
+                    pp -= LOOPER_LENGTH;
+                    info!("loop!!");
+                }
+            })
+            .await
+    );
 }
 
 #[embassy_executor::main]
