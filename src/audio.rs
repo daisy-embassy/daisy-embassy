@@ -266,7 +266,7 @@ impl Interface<'_, Running> {
         loop {
             self.sai_rx.read(&mut read_buf).await?;
             callback(&read_buf, &mut write_buf);
-            self.sai_tx.read(&mut write_buf).await?;
+            self.sai_tx.write(&write_buf).await?;
         }
     }
 }
