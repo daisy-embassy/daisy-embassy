@@ -8,7 +8,7 @@
 #![no_main]
 
 use daisy_embassy::{hal, led::UserLed, new_daisy_board, DaisyBoard};
-use defmt::debug;
+use defmt::{debug, unwrap};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
@@ -35,14 +35,17 @@ async fn main(spawner: Spawner) {
     let led = board.user_led;
     spawner.spawn(blink(led)).unwrap();
 
-    let mut interface = board
+    let interface = board
         .audio_peripherals
         .prepare_interface(Default::default())
         .await;
 
-    interface
-        .start(|input, output| {
-            output.copy_from_slice(input);
-        })
-        .await;
+    let mut interface = unwrap!(interface.start_interface().await);
+    unwrap!(
+        interface
+            .start_callback(|input, output| {
+                output.copy_from_slice(input);
+            })
+            .await
+    );
 }
