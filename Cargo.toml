@@ -39,7 +39,7 @@ embassy-usb = "0.4.0"
 # embassy-executor = { path = "../_third_party/embassy/embassy-executor", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "integrated-timers"] }
 # embassy-futures = { path = "../_third_party/embassy/embassy-futures" }
 # embassy-usb = { path = "../_third_party/embassy/embassy-usb" }
-critical-section = "1.1"
+critical-section = "1.2.0"
 heapless = { version = "0.8", default-features = false }
 micromath = "2.0.0"
 
