@@ -4,7 +4,7 @@
 use core::sync::atomic::{AtomicU8, Ordering};
 
 use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, hal, new_daisy_board};
-use defmt::debug;
+use defmt::{debug, unwrap};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_time::Timer;
@@ -46,7 +46,7 @@ async fn main(_spawner: Spawner) {
     let config = daisy_embassy::default_rcc();
     let p = hal::init(config);
     let board = new_daisy_board!(p);
-    let mut interface = board
+    let interface = board
         .audio_peripherals
         .prepare_interface(Default::default())
         .await;
@@ -69,26 +69,32 @@ async fn main(_spawner: Spawner) {
 
     let mut buf = [0; HALF_DMA_BUFFER_LENGTH];
     let mut smp_pos: u32 = 0;
-    join(
-        change_freq_fut,
-        interface.start(|_input, output| {
-            let period = WaveFrequency::from(wave_freq.load(Ordering::SeqCst)).as_period();
-            for chunk in buf.chunks_mut(2) {
-                let smp = f32_to_u24(make_triangle_wave(smp_pos % period, period));
-                if mute.is_high() {
-                    chunk[0] = smp;
-                    chunk[1] = smp;
-                } else {
-                    //if user push mute button, do not send triangle wave
-                    chunk[0] = 0;
-                    chunk[1] = 0;
-                }
-                smp_pos = smp_pos.wrapping_add(1);
-            }
-            output.copy_from_slice(&buf);
-        }),
-    )
-    .await;
+
+    let oscillator_fut = async {
+        let mut interface = unwrap!(interface.start_interface().await);
+        unwrap!(
+            interface
+                .start_callback(|_input, output| {
+                    let period = WaveFrequency::from(wave_freq.load(Ordering::SeqCst)).as_period();
+                    for chunk in buf.chunks_mut(2) {
+                        let smp = f32_to_u24(make_triangle_wave(smp_pos % period, period));
+                        if mute.is_high() {
+                            chunk[0] = smp;
+                            chunk[1] = smp;
+                        } else {
+                            //if user push mute button, do not send triangle wave
+                            chunk[0] = 0;
+                            chunk[1] = 0;
+                        }
+                        smp_pos = smp_pos.wrapping_add(1);
+                    }
+                    output.copy_from_slice(&buf);
+                })
+                .await
+        );
+    };
+
+    join(change_freq_fut, oscillator_fut).await;
 }
 
 fn make_triangle_wave(pos: u32, period_smp: u32) -> f32 {
