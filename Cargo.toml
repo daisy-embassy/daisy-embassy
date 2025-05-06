@@ -39,7 +39,6 @@ embassy-usb = "0.4.0"
 # embassy-executor = { path = "../_third_party/embassy/embassy-executor", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "integrated-timers"] }
 # embassy-futures = { path = "../_third_party/embassy/embassy-futures" }
 # embassy-usb = { path = "../_third_party/embassy/embassy-usb" }
-embedded-test = { version = "0.4.0", features = ["defmt", "embassy", "external-executor", "panic-handler"] }
 critical-section = "1.1"
 heapless = { version = "0.8", default-features = false }
 micromath = "2.0.0"
@@ -110,7 +109,3 @@ path = "examples/_minimum_sai.rs"
 [[example]]
 name = "_minimum_flash"
 path = "examples/_minimum_flash.rs"
-
-[[test]]
-name = "test"
-harness = false
