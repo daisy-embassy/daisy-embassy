@@ -32,14 +32,16 @@ let mut interface = board
     .prepare_interface(Default::default())
     .await;
 
+// start audio interface
+let mut interface = unwrap!(interface.start_interface().await);
 // start audio callback
-interface
-    .start(|input, output| {
-        // process audio data
-        // here we just copy input to output
-        output.copy_from_slice(input);
-    })
-    .await;
+unwrap!(
+    interface
+        .start_callback(|input, output| {
+            output.copy_from_slice(input);
+        })
+        .await
+);
 ```
 
 ### How It Works

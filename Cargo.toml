@@ -1,12 +1,12 @@
 [package]
 name = "daisy-embassy"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["DicklessGreat<dicklessgreat@gmail.com>"]
 description = "async audio development with daisy seed and embassy"
 keywords = ["embassy", "async", "audio", "embedded", "no-std"]
 license = "MIT"
-repository = "https://github.com/Dicklessgreat/daisy-embassy"
+repository = "https://github.com/daisy-embassy/daisy-embassy"
 categories = ["embedded"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -39,8 +39,7 @@ embassy-usb = "0.4.0"
 # embassy-executor = { path = "../_third_party/embassy/embassy-executor", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "integrated-timers"] }
 # embassy-futures = { path = "../_third_party/embassy/embassy-futures" }
 # embassy-usb = { path = "../_third_party/embassy/embassy-usb" }
-embedded-test = { version = "0.4.0", features = ["defmt", "embassy", "external-executor", "panic-handler"] }
-critical-section = "1.1"
+critical-section = "1.2.0"
 heapless = { version = "0.8", default-features = false }
 micromath = "2.0.0"
 
@@ -51,7 +50,6 @@ seed = []
 seed_1_1 = []
 seed_1_2 = []
 patch_sm = []
-panic_on_overrun = []
 # defmt = []
 
 # [patch.crates-io]
@@ -111,7 +109,3 @@ path = "examples/_minimum_sai.rs"
 [[example]]
 name = "_minimum_flash"
 path = "examples/_minimum_flash.rs"
-
-[[test]]
-name = "test"
-harness = false
