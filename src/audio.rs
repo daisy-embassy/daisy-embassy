@@ -212,6 +212,8 @@ pub struct Interface<'a, S: InterfaceState> {
 }
 
 impl<'a> Interface<'a, Idle> {
+    /// This has to be called before `Interface::start_callback` can be used to ensure proper setup of the interface.
+    /// `Interface::start_callback` should be called immediately afterwards otherwise overruns of the SAI can occur.
     pub async fn start_interface(mut self) -> Result<Interface<'a, Running>, sai::Error> {
         self.setup().await?;
         Ok(Interface {
