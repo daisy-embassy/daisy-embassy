@@ -38,6 +38,8 @@ let mut interface = unwrap!(interface.start_interface().await);
 unwrap!(
     interface
         .start_callback(|input, output| {
+            // process audio data
+            // here, we just copy input to output
             output.copy_from_slice(input);
         })
         .await
@@ -46,7 +48,7 @@ unwrap!(
 
 ### How It Works
 
-- **Macro Simplicity**: The `new_daisy_board!` macro moves necessary objects from `embassy::Peripherals` into builders like `daisy_embassy::AudioPeripherals` or `daisy_embassy::FlashBuilder` and so on, streamlining peripheral initialization.
+- **Macro Simplicity**: The `new_daisy_board!` macro moves necessary objects from `embassy_stm32::Peripherals` into builders like `daisy_embassy::AudioPeripherals` or `daisy_embassy::FlashBuilder` and so on, streamlining peripheral initialization.
 - **Builder Pattern**: Peripherals are accessed via a `XXXBuilder` struct, which provides builder methods (in the case above, `.prepare_interface()`) for safe configuration.
 - **Flexibility**: Builders expose `pub` accessors, allowing advanced users to bypass our building and implement custom initialization logic for peripherals.
 - **Safety**: The API ensures memory safety and correct peripheral usage, aligning with Rust's guarantees.
@@ -112,6 +114,12 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
    - Modify examples to create custom audio applications.
    - Debug issues using probe-rs logs.
    - When you find a bug, need help, or have suggestions, open an [Issue](https://github.com/Dicklessgreat/daisy-embassy/issues).
+
+---
+
+## Announcements
+
+- [version `0.2.0`(and `0.1.0`)](https://github.com/daisy-embassy/daisy-embassy/discussions/42)
 
 ---
 
