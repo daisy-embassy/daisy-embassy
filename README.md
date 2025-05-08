@@ -117,6 +117,12 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 ---
 
+## Announcements
+
+- [version `0.2.0`(and `0.1.0`)](https://github.com/daisy-embassy/daisy-embassy/discussions/42)
+
+---
+
 ## Resources
 
 - [Daisy](https://daisy.audio/hardware/)
