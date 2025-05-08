@@ -38,6 +38,8 @@ let mut interface = unwrap!(interface.start_interface().await);
 unwrap!(
     interface
         .start_callback(|input, output| {
+            // process audio data
+            // here, we just copy input to output
             output.copy_from_slice(input);
         })
         .await
