@@ -48,7 +48,7 @@ unwrap!(
 
 ### How It Works
 
-- **Macro Simplicity**: The `new_daisy_board!` macro moves necessary objects from `embassy::Peripherals` into builders like `daisy_embassy::AudioPeripherals` or `daisy_embassy::FlashBuilder` and so on, streamlining peripheral initialization.
+- **Macro Simplicity**: The `new_daisy_board!` macro moves necessary objects from `embassy_stm32::Peripherals` into builders like `daisy_embassy::AudioPeripherals` or `daisy_embassy::FlashBuilder` and so on, streamlining peripheral initialization.
 - **Builder Pattern**: Peripherals are accessed via a `XXXBuilder` struct, which provides builder methods (in the case above, `.prepare_interface()`) for safe configuration.
 - **Flexibility**: Builders expose `pub` accessors, allowing advanced users to bypass our building and implement custom initialization logic for peripherals.
 - **Safety**: The API ensures memory safety and correct peripheral usage, aligning with Rust's guarantees.
