@@ -38,6 +38,14 @@ static RX_BUFFER: GroundedArrayCell<u32, DMA_BUFFER_LENGTH> = GroundedArrayCell:
 // - types --------------------------------------------------------------------
 
 pub type InterleavedBlock = [u32; HALF_DMA_BUFFER_LENGTH];
+
+/// `AudioPeripherals` is a builder to make `Interface` safely.
+/// It ensures the correct pin mappings and DMA regions for
+/// SAI on every supported Seed revision, preventing invalid peripheral
+/// configurations at compile time.
+/// Use `prepare_interface()` to apply board‐rev-specific SAI setup
+/// and transition into the `Interface<'_, Idle>`. From there you can call `start_interface()` to move to
+/// `Interface<'_, Running>` and begin audio callbacks.
 pub struct AudioPeripherals {
     pub codec: Codec,
     pub codec_pins: CodecPins,
@@ -202,6 +210,65 @@ pub trait InterfaceState {}
 impl InterfaceState for Idle {}
 impl InterfaceState for Running {}
 
+/// decides when and how you start audio callback at runtime.
+/// It enforces a two-state model:
+///
+/// * **Idle** – peripherals configured but SAI not started.
+/// * **Running** – SAI started, ready to execute audio callbacks.
+///
+/// Transition from Idle to Running by calling `start_interface()`, which performs
+/// codec register writes, waits for codec timing, and starts the SAI receiver and transmitter.
+/// Once Running, invoke `start_callback()` to enter a continuous read→process→write loop. Any SAI errors are returned
+/// to the caller for custom handling.
+///
+/// # Example
+/// ```rust
+/// /// `Interface<'a, S>` manages the setup and runtime of an SAI-based audio stream.
+/// It drives codec initialization (over I2C if required), configures SAI TX/RX,
+/// and enforces a two-state model:
+///
+/// * **Idle** – peripherals configured but SAI not started.
+/// * **Running** – SAI started, ready to execute audio callbacks.
+///
+/// Transition from Idle to Running by calling `start_interface()`, which performs
+/// codec register writes, waits for codec timing, and starts the SAI receiver and transmitter.
+/// Once Running, invoke `start_callback()` to enter a continuous read→process→write loop. Any SAI errors are returned
+/// to the caller for custom handling.
+///
+/// # Example
+/// ```rust
+/// // 1. Configure peripherals into Idle state
+/// let idle: Interface<Idle> = board
+///     .audio_peripherals
+///     .prepare_interface(Default::default())
+///     .await;
+///
+/// // ... initialize your DSP or other resources ...
+///
+/// // 2. Start interface and transition to Running
+/// let mut audio: Interface<Running> = idle
+///     .start_interface()
+///     .await
+///     .unwrap();
+///
+/// // 3. Audio processing loop with error handling
+/// loop {
+///     // Runs until an SAI error occurs, then returns Err(e)
+///     if let Err(e) = audio
+///         .start_callback(|input, output| {
+///             // process `input` samples into `output` buffer
+///         })
+///         .await
+///     {
+///         // handle SAI error e (be quick to avoid overrun)
+///     }
+///
+///     // ... optionally reset or reinitialize DSP ...
+/// }
+/// ```
+/// # Notes
+/// - Always call `start_interface()` before `start_callback()`.
+/// - Keep callback and error-handling routines short to prevent SAI overruns.
 pub struct Interface<'a, S: InterfaceState> {
     sai_tx_config: sai::Config,
     sai_rx_config: sai::Config,
