@@ -66,7 +66,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 | Daisy Seed (AK4556)  | -        | AK4556    | 🚧 Not yet    |
 | Daisy Patch SM       | -        | -         | 🚧 Not yet    |
 
-> **Note**: Additional board support is planned. Contributions are welcome; see the [Issues](https://github.com/Dicklessgreat/daisy-embassy/issues) page for details.
+> **Note**: Additional board support is planned. Contributions are welcome; see the [Issues](https://github.com/daisy-embassy/daisy-embassy/issues) page for details.
 
 ---
 
@@ -91,7 +91,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 1. **Clone the Repository**:
 
    ```bash
-   git clone https://github.com/Dicklessgreat/daisy-embassy.git
+   git clone https://github.com/daisy-embassy/daisy-embassy.git
    cd daisy-embassy
    ```
 
@@ -113,7 +113,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
    - Explore `examples/` for demos like `passthrough.rs` or `triangle_wave_tx.rs`.
    - Modify examples to create custom audio applications.
    - Debug issues using probe-rs logs.
-   - When you find a bug, need help, or have suggestions, open an [Issue](https://github.com/Dicklessgreat/daisy-embassy/issues).
+   - When you find a bug, need help, or have suggestions, open an [Issue](https://github.com/daisy-embassy/daisy-embassy/issues).
 
 ---
 
