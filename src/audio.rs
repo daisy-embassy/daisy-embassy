@@ -57,6 +57,19 @@ pub struct AudioPeripherals {
 }
 
 impl AudioPeripherals {
+    /// Prepares the audio interface.
+    ///
+    /// This method sets up the SAI transmitter and receiver, configures the codec (if necessary),
+    /// allocates DMA buffers, and applies board-specific SAI settings. It returns an `Interface<'a, Idle>`
+    /// in the Idle state, allowing the runtime to decide when to start audio callbacks using `start_interface()`.
+    ///
+    /// # Arguments
+    /// * `audio_config` - Audio configuration parameters such as the sample rate.  
+    ///   You can use `AudioConfig::default()` or `Default::default()` for default settings.
+    ///
+    /// # Notes
+    /// - This method is async because `seed_1_1` requires I2C communication with the WM8731 codec.
+    /// - The board revision is selected via Cargo features (`seed_1_1`, `seed_1_2`).
     pub async fn prepare_interface<'a>(self, audio_config: AudioConfig) -> Interface<'a, Idle> {
         #[cfg(feature = "seed_1_1")]
         {
