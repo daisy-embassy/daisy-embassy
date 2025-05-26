@@ -234,9 +234,7 @@ impl InterfaceState for Running {}
 /// Once Running, invoke `start_callback()` to enter a continuous read→process→write loop. Any SAI errors are returned
 /// to the caller for custom handling.
 ///
-/// # Example
-/// ```rust
-/// /// `Interface<'a, S>` manages the setup and runtime of an SAI-based audio stream.
+/// `Interface<'a, S>` manages the setup and runtime of an SAI-based audio stream.
 /// It drives codec initialization (over I2C if required), configures SAI TX/RX,
 /// and enforces a two-state model:
 ///
