@@ -122,43 +122,108 @@ macro_rules! codec_pins {
         }
     };
 }
+
+#[cfg(feature = "patch_sm")]
+#[macro_export]
+macro_rules! codec_pins {
+    ($p:ident) => {
+        daisy_embassy::CodecPins {
+            SCL: $p.PB10,
+            SDA: $p.PB11,
+
+            MCLK_A: $p.PE2,
+            SCK_A: $p.PE5,
+            FS_A: $p.PE4,
+            SD_A: $p.PE6,
+            SD_B: $p.PE3,
+        }
+    };
+}
+
+#[cfg(any(feature = "seed", feature = "seed_1_1", feature = "seed_1_2"))]
+#[macro_export]
+macro_rules! daisy_pins {
+    ($p:ident) => {
+        daisy_embassy::pins::DaisyPins {
+            d0: $p.PB12,
+            d1: $p.PC11,
+            d2: $p.PC10,
+            d3: $p.PC9,
+            d4: $p.PC8,
+            d5: $p.PD2,
+            d6: $p.PC12,
+            d7: $p.PG10,
+            d8: $p.PG11,
+            d9: $p.PB4,
+            d10: $p.PB5,
+            d11: $p.PB8,
+            d12: $p.PB9,
+            d13: $p.PB6,
+            d14: $p.PB7,
+            d15: $p.PC0,
+            d16: $p.PA3,
+            d17: $p.PB1,
+            d18: $p.PA7,
+            d19: $p.PA6,
+            d20: $p.PC1,
+            d21: $p.PC4,
+            d22: $p.PA5,
+            d23: $p.PA4,
+            d24: $p.PA1,
+            d25: $p.PA0,
+            d26: $p.PD11,
+            d27: $p.PG9,
+            d28: $p.PA2,
+            d29: $p.PB14,
+            d30: $p.PB15,
+        }
+    };
+}
+
+#[cfg(feature = "patch_sm")]
+#[macro_export]
+macro_rules! daisy_pins {
+    ($p:ident) => {
+        daisy_embassy::pins::DaisyPins {
+            a2: $p.PA1,
+            a3: $p.PA0,
+            a8: $p.PB14,
+            a9: $p.PB15,
+            b5: $p.PC13,
+            b6: $p.PC14,
+            b7: $p.PB8,
+            b8: $p.PB9,
+            b9: $p.PG14,
+            b10: $p.PG13,
+            c1: $p.PA5,
+            c2: $p.PA7,
+            c3: $p.PA2,
+            c4: $p.PA6,
+            c5: $p.PA3,
+            c6: $p.PC1,
+            c7: $p.PC0,
+            c8: $p.PB1,
+            c9: $p.PC4,
+            c10: $p.PA4,
+            d1: $p.PB4,
+            d2: $p.PC11,
+            d3: $p.PC10,
+            d4: $p.PC9,
+            d5: $p.PC8,
+            d6: $p.PC12,
+            d7: $p.PD2,
+            d8: $p.PC2,
+            d9: $p.PC3,
+            d10: $p.PD3,
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! new_daisy_board {
     ($p:ident) => {
         daisy_embassy::board::DaisyBoard {
-            pins: daisy_embassy::pins::DaisyPins {
-                d0: $p.PB12,
-                d1: $p.PC11,
-                d2: $p.PC10,
-                d3: $p.PC9,
-                d4: $p.PC8,
-                d5: $p.PD2,
-                d6: $p.PC12,
-                d7: $p.PG10,
-                d8: $p.PG11,
-                d9: $p.PB4,
-                d10: $p.PB5,
-                d11: $p.PB8,
-                d12: $p.PB9,
-                d13: $p.PB6,
-                d14: $p.PB7,
-                d15: $p.PC0,
-                d16: $p.PA3,
-                d17: $p.PB1,
-                d18: $p.PA7,
-                d19: $p.PA6,
-                d20: $p.PC1,
-                d21: $p.PC4,
-                d22: $p.PA5,
-                d23: $p.PA4,
-                d24: $p.PA1,
-                d25: $p.PA0,
-                d26: $p.PD11,
-                d27: $p.PG9,
-                d28: $p.PA2,
-                d29: $p.PB14,
-                d30: $p.PB15,
-            },
+            pins: daisy_embassy::daisy_pins!($p),
             user_led: daisy_embassy::led::UserLed::new($p.PC7),
 
             audio_peripherals: daisy_embassy::audio::AudioPeripherals {
