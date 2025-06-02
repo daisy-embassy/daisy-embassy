@@ -117,6 +117,12 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 ---
 
+## Sample Projects
+
+[daisy-patch-embassy](https://github.com/daisy-embassy/daisy-patch-embassy)
+
+---
+
 ## Announcements
 
 - [version `0.2.0`(and `0.1.0`)](https://github.com/daisy-embassy/daisy-embassy/discussions/42)
