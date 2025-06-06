@@ -10,3 +10,8 @@ pub use wm8731::{Codec, Pins};
 mod pcm3060;
 #[cfg(feature = "seed_1_2")]
 pub use pcm3060::{Codec, Pins};
+
+#[cfg(feature = "patch_sm")]
+mod pcm3060_i2c;
+#[cfg(feature = "patch_sm")]
+pub use pcm3060_i2c::{Codec, Pins};
