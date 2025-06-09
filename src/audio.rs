@@ -5,8 +5,6 @@ use crate::codec::{Codec, Pins as CodecPins};
 use defmt::info;
 use defmt::unwrap;
 use embassy_stm32 as hal;
-use embassy_stm32::dma::word;
-use embassy_stm32::sai::{ComplementFormat, FrameSyncDefinition, SlotSize};
 use grounded::uninit::GroundedArrayCell;
 use hal::sai::FifoThreshold;
 use hal::sai::FrameSyncOffset;
@@ -248,11 +246,11 @@ impl AudioPeripherals {
             sai_rx_config.frame_sync_polarity = FrameSyncPolarity::ActiveHigh;
             sai_rx_config.frame_sync_offset = FrameSyncOffset::OnFirstBit;
             sai_rx_config.frame_length = 64;
-            sai_rx_config.frame_sync_active_level_length = embassy_stm32::sai::word::U7(32);
+            sai_rx_config.frame_sync_active_level_length = sai::word::U7(32);
             sai_rx_config.fifo_threshold = FifoThreshold::Quarter;
-            sai_rx_config.mute_detection_counter = word::U5(0);
-            sai_rx_config.slot_size = SlotSize::Channel32;
-            sai_rx_config.complement_format = ComplementFormat::OnesComplement;
+            sai_rx_config.mute_detection_counter = hal::dma::word::U5(0);
+            sai_rx_config.slot_size = sai::SlotSize::Channel32;
+            sai_rx_config.complement_format = sai::ComplementFormat::OnesComplement;
 
             let mut sai_tx_config = sai_rx_config;
             sai_tx_config.mode = Mode::Slave;
