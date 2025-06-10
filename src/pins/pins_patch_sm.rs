@@ -5,22 +5,25 @@ pub type PatchPinA2 = PA1; // ADC_9, GPIO, UART4_RX
 pub type PatchPinA3 = PA0; // ADC_10, GPIO, UART4_TX
 pub type PatchPinA8 = PB14; // USB_DM, GPIO, USART1_TX
 pub type PatchPinA9 = PB15; // USB_DP, GPIO, USART1_RX
-pub type PatchPinB5 = PC13; // GATE_OUT_1 Output Only
-pub type PatchPinB6 = PC14; // GATE_OUT_2 Output Only
+
+pub type PatchPinB5 = PC14; // GATE_OUT_1 Output Only
+pub type PatchPinB6 = PC13; // GATE_OUT_2 Output Only
 pub type PatchPinB7 = PB8; // I2C1_SCL, GPIO, UART4_RX, PWM (TIM4_CH3)
 pub type PatchPinB8 = PB9; // I2C1_SDA, GPIO, UART4_TX, PWM (TIM4_CH4)
 pub type PatchPinB9 = PG14; // GATE_IN_2, Input Only
 pub type PatchPinB10 = PG13; // GATE_IN_1, Input Only
+
 pub type PatchPinC1 = PA5; // CV_OUT_2, Output Only
 pub type PatchPinC2 = PA7; // CV_4, Input Only
 pub type PatchPinC3 = PA2; // CV_3, Input Only
 pub type PatchPinC4 = PA6; // CV_2, Input Only
 pub type PatchPinC5 = PA3; // CV_1, Input Only
-pub type PatchPinC6 = PC1; // CV_8, Input Only
-pub type PatchPinC7 = PC0; // CV_7, Input Only
-pub type PatchPinC8 = PB1; // CV_5, Input Only
-pub type PatchPinC9 = PC4; // CV_6, Input Only
+pub type PatchPinC6 = PB1; // CV_5, Input Only
+pub type PatchPinC7 = PC4; // CV_6, Input Only
+pub type PatchPinC8 = PC0; // CV_7, Input Only
+pub type PatchPinC9 = PC1; // CV_8, Input Only
 pub type PatchPinC10 = PA4; // CV_OUT_1, Output Only
+
 pub type PatchPinD1 = PB4; // SPI2_CS, GPIO
 pub type PatchPinD2 = PC11; // SDMMC1_D3, GPIO, USART3_RX*
 pub type PatchPinD3 = PC10; // SDMMC1_D2, GPIO, USART3_TX*
@@ -39,12 +42,14 @@ pub struct DaisyPins {
     pub a3: PatchPinA3,
     pub a8: PatchPinA8,
     pub a9: PatchPinA9,
+
     pub b5: PatchPinB5,
     pub b6: PatchPinB6,
     pub b7: PatchPinB7,
     pub b8: PatchPinB8,
     pub b9: PatchPinB9,
     pub b10: PatchPinB10,
+
     pub c1: PatchPinC1,
     pub c2: PatchPinC2,
     pub c3: PatchPinC3,
@@ -55,6 +60,7 @@ pub struct DaisyPins {
     pub c8: PatchPinC8,
     pub c9: PatchPinC9,
     pub c10: PatchPinC10,
+
     pub d1: PatchPinD1,
     pub d2: PatchPinD2,
     pub d3: PatchPinD3,
