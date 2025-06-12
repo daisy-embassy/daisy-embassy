@@ -59,12 +59,12 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 ## Supported Daisy Boards
 
-| Board                | Revision | Codec     | Status         |
-|----------------------|----------|-----------|----------------|
-| Daisy Seed 1.1       | Rev5     | WM8731    | ✅ Supported   |
-| Daisy Seed 1.2       | Rev7     | PCM3060   | ✅ Supported   |
-| Daisy Seed (AK4556)  | -        | AK4556    | 🚧 Not yet    |
-| Daisy Patch SM       | -        | -         | 🚧 Not yet    |
+| Board               | Revision | Codec   | Status      |
+|---------------------|----------|---------|-------------|
+| Daisy Seed 1.1      | Rev5     | WM8731  | ✅ Supported |
+| Daisy Seed 1.2      | Rev7     | PCM3060 | ✅ Supported |
+| Daisy Seed (AK4556) | -        | AK4556  | 🚧 Not yet  |
+| Daisy Patch SM      | -        | PCM3060 | ✅ Supported |
 
 > **Note**: Additional board support is planned. Contributions are welcome; see the [Issues](https://github.com/daisy-embassy/daisy-embassy/issues) page for details.
 
@@ -82,7 +82,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 - **probe-rs**: For flashing and debugging, [install probe-rs](https://probe.rs/docs/getting-started/installation/).
 
-- **Daisy Seed**: Supported board (Rev5 or Rev7) and USB cable.
+- **Hardware**: Supported board (Daisy Seed Rev5 or Rev7, or Daisy Patch SM) and USB cable.
 
 > **Tip**: If probe-rs fails, verify your board connection and check [probe-rs docs](https://probe.rs/docs/overview/about-probe-rs/).
 
@@ -96,8 +96,9 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
    ```
 
 2. **Identify Your Board**:
-   - Rev5 (WM8731): Default, no extra flags.
-   - Rev7 (PCM3060): Use `--features=seed_1_2 --no-default-features`.
+   - Daisy Seed Rev5 (WM8731): Default, no extra flags.
+   - Daisy Seed Rev7 (PCM3060): Use `--features=seed_1_2 --no-default-features`.
+   - Daisy Patch SM: Use `--features=patch_sm --no-default-features`.
 
 3. **Run an Example**:
 

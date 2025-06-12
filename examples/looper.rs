@@ -101,7 +101,12 @@ async fn main(_spawner: Spawner) {
         .await;
     let sdram = board.sdram.build(&mut c.MPU, &mut c.SCB);
 
+    #[cfg(any(feature = "seed", feature = "seed_1_1", feature = "seed_1_2"))]
     let mut record_pin = ExtiInput::new(board.pins.d16, p.EXTI3, Pull::Up);
+
+    #[cfg(feature = "patch_sm")]
+    let mut record_pin = ExtiInput::new(board.pins.b7, p.EXTI8, Pull::Up);
+
     let record_fut = async {
         loop {
             record_pin.wait_for_falling_edge().await;

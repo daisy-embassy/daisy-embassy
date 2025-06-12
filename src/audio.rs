@@ -9,7 +9,7 @@ use grounded::uninit::GroundedArrayCell;
 use hal::sai::FifoThreshold;
 use hal::sai::FrameSyncOffset;
 use hal::sai::{BitOrder, SyncInput};
-#[cfg(feature = "seed_1_1")]
+#[cfg(any(feature = "seed_1_1", feature = "patch_sm"))]
 use hal::time::Hertz;
 use hal::{
     peripherals,
@@ -21,7 +21,7 @@ use hal::{
 
 // - global constants ---------------------------------------------------------
 
-#[cfg(feature = "seed_1_1")]
+#[cfg(any(feature = "seed_1_1", feature = "patch_sm"))]
 const I2C_FS: Hertz = Hertz(100_000);
 pub const BLOCK_LENGTH: usize = 32; // 32 samples
 pub const HALF_DMA_BUFFER_LENGTH: usize = BLOCK_LENGTH * 2; //  2 channels
@@ -214,6 +214,91 @@ impl AudioPeripherals {
                 _state: PhantomData,
             }
         }
+
+        #[cfg(feature = "patch_sm")]
+        {
+            info!("set up i2c");
+            let i2c_config = hal::i2c::Config::default();
+            let mut i2c = embassy_stm32::i2c::I2c::new_blocking(
+                self.i2c2,
+                self.codec_pins.SCL,
+                self.codec_pins.SDA,
+                I2C_FS,
+                i2c_config,
+            );
+            info!("set up PCM3060");
+            Codec::setup_pcm3060(&mut i2c).await;
+
+            info!("set up sai");
+            let (sub_block_rx, sub_block_tx) = hal::sai::split_subblocks(self.sai1);
+
+            // The configuration was made to match the the register values obtained with
+            // https://github.com/zlosynth/daisy
+            let mut sai_rx_config = hal::sai::Config::default();
+            sai_rx_config.mode = Mode::Master;
+            sai_rx_config.tx_rx = TxRx::Receiver;
+            sai_rx_config.sync_output = true;
+            sai_rx_config.clock_strobe = ClockStrobe::Rising;
+            sai_rx_config.master_clock_divider = audio_config.fs.into_clock_divider();
+            sai_rx_config.stereo_mono = StereoMono::Stereo;
+            sai_rx_config.data_size = DataSize::Data24;
+            sai_rx_config.bit_order = BitOrder::MsbFirst;
+            sai_rx_config.frame_sync_polarity = FrameSyncPolarity::ActiveHigh;
+            sai_rx_config.frame_sync_offset = FrameSyncOffset::OnFirstBit;
+            sai_rx_config.frame_length = 64;
+            sai_rx_config.frame_sync_active_level_length = sai::word::U7(32);
+            sai_rx_config.fifo_threshold = FifoThreshold::Quarter;
+            sai_rx_config.mute_detection_counter = hal::dma::word::U5(0);
+            sai_rx_config.slot_size = sai::SlotSize::Channel32;
+            sai_rx_config.complement_format = sai::ComplementFormat::OnesComplement;
+
+            let mut sai_tx_config = sai_rx_config;
+            sai_tx_config.mode = Mode::Slave;
+            sai_tx_config.tx_rx = TxRx::Transmitter;
+            sai_tx_config.sync_input = SyncInput::Internal;
+            sai_tx_config.clock_strobe = ClockStrobe::Rising;
+            sai_tx_config.sync_output = false;
+
+            let tx_buffer: &mut [u32] = unsafe {
+                TX_BUFFER.initialize_all_copied(0);
+                let (ptr, len) = TX_BUFFER.get_ptr_len();
+                core::slice::from_raw_parts_mut(ptr, len)
+            };
+
+            let rx_buffer: &mut [u32] = unsafe {
+                RX_BUFFER.initialize_all_copied(0);
+                let (ptr, len) = RX_BUFFER.get_ptr_len();
+                core::slice::from_raw_parts_mut(ptr, len)
+            };
+
+            let sai_tx = hal::sai::Sai::new_synchronous(
+                sub_block_tx,
+                self.codec_pins.SD_B,
+                self.dma1_ch1,
+                tx_buffer,
+                sai_tx_config,
+            );
+
+            let sai_rx = hal::sai::Sai::new_asynchronous_with_mclk(
+                sub_block_rx,
+                self.codec_pins.SCK_A,
+                self.codec_pins.SD_A,
+                self.codec_pins.FS_A,
+                self.codec_pins.MCLK_A,
+                self.dma1_ch0,
+                rx_buffer,
+                sai_rx_config,
+            );
+
+            Interface {
+                sai_rx_config,
+                sai_tx_config,
+                sai_rx,
+                sai_tx,
+                i2c: Some(i2c),
+                _state: PhantomData,
+            }
+        }
     }
 }
 
@@ -316,7 +401,7 @@ impl<'a> Interface<'a, Idle> {
         }
 
         info!("start SAI");
-        #[cfg(feature = "seed_1_2")]
+        #[cfg(any(feature = "seed_1_2", feature = "patch_sm"))]
         {
             // As the SAI configuration for the PCM3060
             // codec requires the SAI reciever to be in
@@ -327,6 +412,7 @@ impl<'a> Interface<'a, Idle> {
             let write_buf = [0; HALF_DMA_BUFFER_LENGTH];
             self.sai_tx.write(&write_buf).await?;
         }
+
         self.sai_rx.start()
     }
 

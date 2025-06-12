@@ -50,8 +50,22 @@ async fn main(_spawner: Spawner) {
         .audio_peripherals
         .prepare_interface(Default::default())
         .await;
-    let mute = Input::new(board.pins.d15, Pull::Up);
-    let mut change_freq = ExtiInput::new(board.pins.d16, p.EXTI3, Pull::Up);
+
+    let mute;
+    let mut change_freq;
+
+    #[cfg(any(feature = "seed", feature = "seed_1_1", feature = "seed_1_2"))]
+    {
+        mute = Input::new(board.pins.d15, Pull::Up);
+        change_freq = ExtiInput::new(board.pins.d16, p.EXTI3, Pull::Up);
+    }
+
+    #[cfg(feature = "patch_sm")]
+    {
+        mute = Input::new(board.pins.b8, Pull::Up);
+        change_freq = ExtiInput::new(board.pins.b7, p.EXTI8, Pull::Up);
+    }
+
     let wave_freq = AtomicU8::new(0);
 
     let change_freq_fut = async {
