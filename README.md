@@ -126,6 +126,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 ## Announcements
 
+- [add Daisy Patch SM support(version `0.2.1`)](https://github.com/daisy-embassy/daisy-embassy/discussions/51)
 - [version `0.2.0`(and `0.1.0`)](https://github.com/daisy-embassy/daisy-embassy/discussions/42)
 
 ---
