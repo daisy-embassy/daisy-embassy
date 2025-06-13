@@ -108,6 +108,9 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
    # Rev7: Triangle wave example
    cargo run --example triangle_wave_tx --features=seed_1_2 --no-default-features --release
+
+   # Path SM: looper example
+   cargo run --example looper --features=patch_sm --no-default-features --release
    ```
 
 4. **Build and Customize**:
