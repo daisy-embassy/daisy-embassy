@@ -28,7 +28,7 @@ static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
 
 #[interrupt]
 unsafe fn SAI1() {
-    AUDIO_EXECUTOR.on_interrupt()
+    unsafe { AUDIO_EXECUTOR.on_interrupt() }
 }
 
 #[embassy_executor::task]

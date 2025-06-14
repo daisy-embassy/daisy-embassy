@@ -130,7 +130,7 @@ async fn setup_codecs_from_i2c(
     ph4: hal::peripherals::PH4,
     pb11: hal::peripherals::PB11,
 ) {
-    use wm8731::{power_down, WM8731};
+    use wm8731::{WM8731, power_down};
     info!("setup codecs from I2C");
     let i2c_config = hal::i2c::Config::default();
     let mut i2c =
