@@ -3,8 +3,8 @@ use cortex_m::peripheral::{MPU, SCB};
 use embassy_stm32 as hal;
 use hal::fmc::Fmc;
 use hal::peripherals::FMC;
-pub use stm32_fmc::devices::as4c16m32msa_6::As4c16m32msa as FmcDevice;
 use stm32_fmc::Sdram;
+pub use stm32_fmc::devices::as4c16m32msa_6::As4c16m32msa as FmcDevice;
 
 pub const SDRAM_SIZE: usize = 64 * 1024 * 1024;
 pub struct SdRamBuilder {

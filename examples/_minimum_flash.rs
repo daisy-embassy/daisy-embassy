@@ -9,8 +9,8 @@ use embassy_executor::Spawner;
 use embassy_stm32::{
     self as hal,
     qspi::{
-        enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize},
         Qspi,
+        enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize},
     },
 };
 use embassy_time::Timer;
@@ -21,8 +21,8 @@ mod flash {
         mode::Blocking,
         peripherals::QUADSPI,
         qspi::{
-            enums::{DummyCycles, QspiWidth},
             Qspi, TransferConfig,
+            enums::{DummyCycles, QspiWidth},
         },
     };
 

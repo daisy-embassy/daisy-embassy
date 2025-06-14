@@ -5,8 +5,8 @@ use hal::{
     mode::Blocking,
     peripherals::QUADSPI,
     qspi::{
-        enums::{DummyCycles, QspiWidth},
         Qspi, TransferConfig,
+        enums::{DummyCycles, QspiWidth},
     },
 };
 
