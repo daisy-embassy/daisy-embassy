@@ -71,6 +71,79 @@ impl AudioPeripherals {
     /// - This method is async because `seed_1_1` requires I2C communication with the WM8731 codec.
     /// - The board revision is selected via Cargo features (`seed_1_1`, `seed_1_2`).
     pub async fn prepare_interface<'a>(self, audio_config: AudioConfig) -> Interface<'a, Idle> {
+        #[cfg(feature = "seed")]
+        {
+            use embassy_stm32::gpio::{Level, Output, Speed};
+
+            info!("set up Ak4556");
+            Codec::setup_ak4556(Output::new(self.codec_pins.RESET, Level::High, Speed::Low)).await;
+
+            let (sub_block_tx, sub_block_rx) = hal::sai::split_subblocks(self.sai1);
+
+            info!("set up sai_tx");
+            let mut sai_tx_config = sai::Config::default();
+            sai_tx_config.mode = Mode::Master;
+            sai_tx_config.tx_rx = TxRx::Transmitter;
+            sai_tx_config.sync_output = true;
+            sai_tx_config.clock_strobe = ClockStrobe::Falling;
+            sai_tx_config.master_clock_divider = audio_config.fs.into_clock_divider();
+            sai_tx_config.stereo_mono = StereoMono::Stereo;
+            sai_tx_config.data_size = DataSize::Data24;
+            sai_tx_config.bit_order = BitOrder::MsbFirst;
+            sai_tx_config.frame_sync_polarity = FrameSyncPolarity::ActiveHigh;
+            sai_tx_config.frame_sync_offset = FrameSyncOffset::OnFirstBit;
+            sai_tx_config.frame_length = 64;
+            sai_tx_config.frame_sync_active_level_length = embassy_stm32::sai::word::U7(32);
+            sai_tx_config.fifo_threshold = FifoThreshold::Quarter;
+
+            let mut sai_rx_config = sai_tx_config;
+            sai_rx_config.mode = Mode::Slave;
+            sai_rx_config.tx_rx = TxRx::Receiver;
+            sai_rx_config.sync_input = SyncInput::Internal;
+            sai_rx_config.clock_strobe = ClockStrobe::Rising;
+            sai_rx_config.sync_output = false;
+
+            let tx_buffer: &mut [u32] = unsafe {
+                TX_BUFFER.initialize_all_copied(0);
+                let (ptr, len) = TX_BUFFER.get_ptr_len();
+                core::slice::from_raw_parts_mut(ptr, len)
+            };
+
+            let sai_tx = hal::sai::Sai::new_asynchronous_with_mclk(
+                sub_block_tx,
+                self.codec_pins.SCK_A,
+                self.codec_pins.SD_A,
+                self.codec_pins.FS_A,
+                self.codec_pins.MCLK_A,
+                self.dma1_ch1,
+                tx_buffer,
+                sai_tx_config,
+            );
+
+            let rx_buffer: &mut [u32] = unsafe {
+                RX_BUFFER.initialize_all_copied(0);
+                let (ptr, len) = RX_BUFFER.get_ptr_len();
+                core::slice::from_raw_parts_mut(ptr, len)
+            };
+
+            let sai_rx = hal::sai::Sai::new_synchronous(
+                sub_block_rx,
+                self.codec_pins.SD_B,
+                self.dma1_ch2,
+                rx_buffer,
+                sai_rx_config,
+            );
+
+            Interface {
+                sai_rx_config,
+                sai_tx_config,
+                sai_rx,
+                sai_tx,
+                i2c: None,
+                _state: PhantomData,
+            }
+        }
+
         #[cfg(feature = "seed_1_1")]
         {
             info!("set up i2c");
@@ -401,7 +474,7 @@ impl<'a> Interface<'a, Idle> {
         }
 
         info!("start SAI");
-        #[cfg(any(feature = "seed_1_2", feature = "patch_sm"))]
+        #[cfg(any(feature = "seed", feature = "seed_1_2", feature = "patch_sm"))]
         {
             // As the SAI configuration for the PCM3060
             // codec requires the SAI reciever to be in

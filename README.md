@@ -63,10 +63,8 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 |---------------------|----------|---------|-------------|
 | Daisy Seed 1.1      | Rev5     | WM8731  | ✅ Supported |
 | Daisy Seed 1.2      | Rev7     | PCM3060 | ✅ Supported |
-| Daisy Seed (AK4556) | -        | AK4556  | 🚧 Not yet  |
+| Daisy Seed (AK4556) | Rev4     | AK4556  | ✅ Supported |
 | Daisy Patch SM      | -        | PCM3060 | ✅ Supported |
-
-> **Note**: Additional board support is planned. Contributions are welcome; see the [Issues](https://github.com/daisy-embassy/daisy-embassy/issues) page for details.
 
 ---
 
@@ -82,7 +80,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 - **probe-rs**: For flashing and debugging, [install probe-rs](https://probe.rs/docs/getting-started/installation/).
 
-- **Hardware**: Supported board (Daisy Seed Rev5 or Rev7, or Daisy Patch SM) and USB cable.
+- **Hardware**: Supported board (Daisy Seed Rev4, Rev5, or Rev7, or Daisy Patch SM) and USB cable.
 
 > **Tip**: If probe-rs fails, verify your board connection and check [probe-rs docs](https://probe.rs/docs/overview/about-probe-rs/).
 
@@ -103,6 +101,9 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 3. **Run an Example**:
 
    ```bash
+   # Rev4: Passthrough example
+   cargo run --example passthrough --features=seed --no-default-features --release
+
    # Rev5: Blinky example
    cargo run --example blinky --release
 

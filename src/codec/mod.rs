@@ -1,5 +1,7 @@
 #[cfg(feature = "seed")]
-todo!("implement Codec and Pins for ak4556 seed audio codec");
+mod ak4556;
+#[cfg(feature = "seed")]
+pub use ak4556::{Codec, Pins};
 
 #[cfg(feature = "seed_1_1")]
 mod wm8731;
