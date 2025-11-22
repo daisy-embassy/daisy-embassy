@@ -130,6 +130,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 ## Announcements
 
+- [add Seed Rev4(AK4556) support(version `0.2.2`)](https://github.com/daisy-embassy/daisy-embassy/discussions/57)
 - [add Daisy Patch SM support(version `0.2.1`)](https://github.com/daisy-embassy/daisy-embassy/discussions/51)
 - [version `0.2.0`(and `0.1.0`)](https://github.com/daisy-embassy/daisy-embassy/discussions/42)
 
