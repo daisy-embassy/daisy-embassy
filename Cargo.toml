@@ -1,6 +1,6 @@
 [package]
 name = "daisy-embassy"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 authors = ["DicklessGreat<dicklessgreat@gmail.com>"]
 description = "async audio development with daisy seed and embassy"
