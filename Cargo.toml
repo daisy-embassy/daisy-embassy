@@ -20,7 +20,7 @@ embassy-sync = { version = "0.6.2", features = ["defmt"] }
 # embassy-time = { path = "../_third_party/embassy/embassy-time", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 # embassy-sync = { path = "../_third_party/embassy/embassy-sync", features = ["defmt"] }
 cortex-m = "0.7.7"
-static_cell = "2.1.0"
+static_cell = "2.1.1"
 defmt = "0.3.8"
 grounded = "0.2.0"
 wm8731 = "0.1.0"
