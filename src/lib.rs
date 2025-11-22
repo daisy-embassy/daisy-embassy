@@ -92,6 +92,21 @@ pub fn default_rcc() -> hal::Config {
     config
 }
 
+#[cfg(feature = "seed")]
+#[macro_export]
+macro_rules! codec_pins {
+    ($p:ident) => {
+        daisy_embassy::CodecPins {
+            MCLK_A: $p.PE2,
+            SCK_A: $p.PE5,
+            FS_A: $p.PE4,
+            SD_A: $p.PE6,
+            SD_B: $p.PE3,
+            RESET: $p.PB11,
+        }
+    };
+}
+
 #[cfg(feature = "seed_1_1")]
 #[macro_export]
 macro_rules! codec_pins {
