@@ -161,6 +161,7 @@ dependencies = [
  "embassy-sync",
  "embassy-time",
  "embassy-usb",
+ "fhx",
  "grounded",
  "heapless",
  "micromath",
@@ -556,6 +557,15 @@ name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
+
+[[package]]
+name = "fhx"
+version = "0.1.0"
+source = "git+https://github.com/daisy-embassy/fhx.git?rev=25cb1e28cc6fe05cea09b9b1aa21ec43b0bce5bb#25cb1e28cc6fe05cea09b9b1aa21ec43b0bce5bb"
+dependencies = [
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+]
 
 [[package]]
 name = "fnv"
