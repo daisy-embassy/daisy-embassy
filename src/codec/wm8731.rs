@@ -199,7 +199,7 @@ impl<'a> Codec<'a> {
         unwrap!(self.i2c.blocking_write(AD, &[byte1, byte2]));
     }
 
-    pub fn final_power_settings(w: &mut wm8731::power_down::PowerDown) {
+    fn final_power_settings(w: &mut wm8731::power_down::PowerDown) {
         w.power_off().power_on();
         w.clock_output().power_off();
         w.oscillator().power_off();
@@ -229,10 +229,12 @@ impl<'a> Codec<'a> {
         (self.sai_tx, self.sai_rx, self.i2c)
     }
 
+    #[inline(always)]
     pub async fn read(&mut self, read_buf: &mut [u32]) -> Result<(), sai::Error> {
         self.sai_rx.read(read_buf).await
     }
 
+    #[inline(always)]
     pub async fn write(&mut self, write_buf: &[u32]) -> Result<(), sai::Error> {
         self.sai_tx.write(write_buf).await
     }

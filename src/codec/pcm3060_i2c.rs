@@ -112,7 +112,7 @@ impl<'a> Codec<'a> {
         codec
     }
 
-    pub async fn setup_pcm3060(&mut self) {
+    async fn setup_pcm3060(&mut self) {
         // Reset codec
         self.write_pcm3060_reg(SYS_CTRL_REGISTER, MRST_MASK, false)
             .await;
@@ -172,10 +172,12 @@ impl<'a> Codec<'a> {
         (self.sai_tx, self.sai_rx, self.i2c)
     }
 
+    #[inline(always)]
     pub async fn read(&mut self, read_buf: &mut [u32]) -> Result<(), sai::Error> {
         self.sai_rx.read(read_buf).await
     }
 
+    #[inline(always)]
     pub async fn write(&mut self, write_buf: &[u32]) -> Result<(), sai::Error> {
         self.sai_tx.write(write_buf).await
     }

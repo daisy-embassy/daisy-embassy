@@ -104,10 +104,12 @@ impl<'a> Codec<'a> {
         self.sai_rx.start()
     }
 
+    #[inline(always)]
     pub async fn read(&mut self, read_buf: &mut [u32]) -> Result<(), sai::Error> {
         self.sai_rx.read(read_buf).await
     }
 
+    #[inline(always)]
     pub async fn write(&mut self, write_buf: &[u32]) -> Result<(), sai::Error> {
         self.sai_tx.write(write_buf).await
     }
