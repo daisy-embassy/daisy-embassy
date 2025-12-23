@@ -112,7 +112,7 @@ impl<'a> Codec<'a> {
         codec
     }
 
-    pub async fn setup_pcm3060(&mut self) {
+    async fn setup_pcm3060(&mut self) {
         // Reset codec
         self.write_pcm3060_reg(SYS_CTRL_REGISTER, MRST_MASK, false)
             .await;

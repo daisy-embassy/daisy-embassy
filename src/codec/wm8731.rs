@@ -199,7 +199,7 @@ impl<'a> Codec<'a> {
         unwrap!(self.i2c.blocking_write(AD, &[byte1, byte2]));
     }
 
-    pub fn final_power_settings(w: &mut wm8731::power_down::PowerDown) {
+    fn final_power_settings(w: &mut wm8731::power_down::PowerDown) {
         w.power_off().power_on();
         w.clock_output().power_off();
         w.oscillator().power_off();
