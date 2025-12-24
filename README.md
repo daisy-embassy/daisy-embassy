@@ -59,12 +59,14 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 ## Supported Daisy Boards
 
-| Board               | Revision | Codec   | Status      |
-|---------------------|----------|---------|-------------|
-| Daisy Seed 1.1      | Rev5     | WM8731  | ✅ Supported |
-| Daisy Seed 1.2      | Rev7     | PCM3060 | ✅ Supported |
-| Daisy Seed (AK4556) | Rev4     | AK4556  | ✅ Supported |
-| Daisy Patch SM      | -        | PCM3060 | ✅ Supported |
+| Board               | Revision | Codec   | Status        | Tested                  |
+|---------------------|----------|---------|---------------|-------------------------|
+| Daisy Seed 1.1      | Rev5     | WM8731  | ✅ Supported  | 0.2.3 (unreleased)      |
+| Daisy Seed 1.2      | Rev7     | PCM3060 | ✅ Supported  | 0.2.2                   |
+| Daisy Seed (AK4556) | Rev4     | AK4556  | ✅ Supported  | 0.2.3 (unreleased)      |
+| Daisy Patch SM      | -        | PCM3060 | ✅ Supported  | 0.2.2                   |
+
+[Test reports and confirmations for `0.2.3(unreleased)` on Daisy Seed 1.2 and Daisy Patch SM are very welcome.](https://github.com/daisy-embassy/daisy-embassy/issues/59)
 
 ---
 

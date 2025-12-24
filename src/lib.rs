@@ -242,7 +242,6 @@ macro_rules! new_daisy_board {
             user_led: daisy_embassy::led::UserLed::new($p.PC7),
 
             audio_peripherals: daisy_embassy::audio::AudioPeripherals {
-                codec: daisy_embassy::Codec {},
                 codec_pins: daisy_embassy::codec_pins!($p),
                 sai1: $p.SAI1,
                 i2c2: $p.I2C2,
