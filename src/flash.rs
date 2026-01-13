@@ -15,7 +15,6 @@ const WRITE_STATUS_REGISTRY_CMD: u8 = 0x01; // WRSR
 const WRITE_CMD: u8 = 0x02; // PP
 const READ_STATUS_REGISTRY_CMD: u8 = 0x05; // RDSR
 const WRITE_ENABLE_CMD: u8 = 0x06; // WREN
-const ENTER_QPI_MODE_CMD: u8 = 0x35; // QPIEN
 const SET_READ_PARAMETERS_CMD: u8 = 0xC0; // SRP
 const SECTOR_ERASE_CMD: u8 = 0xD7; // SER
 const FAST_READ_QUAD_IO_CMD: u8 = 0xEB; // FRQIO
@@ -43,7 +42,6 @@ impl FlashBuilder {
             qspi, pins.IO0, pins.IO1, pins.IO2, pins.IO3, pins.SCK, pins.CS, config,
         );
         let mut result = Flash { qspi };
-        result.enable_qpi_mode();
         result.reset_status_register();
         result.reset_read_register();
         result
@@ -60,7 +58,7 @@ impl Flash<'_> {
         assert!(address <= MAX_ADDRESS);
 
         let transaction = TransferConfig {
-            iwidth: QspiWidth::QUAD,
+            iwidth: QspiWidth::SING,
             awidth: QspiWidth::QUAD,
             dwidth: QspiWidth::QUAD,
             instruction: FAST_READ_QUAD_IO_CMD,
@@ -73,7 +71,7 @@ impl Flash<'_> {
     pub fn read_uuid(&mut self) -> [u8; 16] {
         let mut buffer = [0; 16];
         let transaction: TransferConfig = TransferConfig {
-            iwidth: QspiWidth::QUAD,
+            iwidth: QspiWidth::SING,
             awidth: QspiWidth::QUAD,
             dwidth: QspiWidth::QUAD,
             instruction: 0x4B,
@@ -100,8 +98,8 @@ impl Flash<'_> {
             let size = page_remainder.min(length) as usize;
             self.enable_write();
             let transaction = TransferConfig {
-                iwidth: QspiWidth::QUAD,
-                awidth: QspiWidth::QUAD,
+                iwidth: QspiWidth::SING,
+                awidth: QspiWidth::SING,
                 dwidth: QspiWidth::QUAD,
                 instruction: WRITE_CMD,
                 address: Some(address),
@@ -133,8 +131,8 @@ impl Flash<'_> {
             // Erase the sector.
             self.enable_write();
             let transaction = TransferConfig {
-                iwidth: QspiWidth::QUAD,
-                awidth: QspiWidth::QUAD,
+                iwidth: QspiWidth::SING,
+                awidth: QspiWidth::SING,
                 dwidth: QspiWidth::NONE,
                 instruction: SECTOR_ERASE_CMD,
                 address: Some(address),
@@ -161,7 +159,7 @@ impl Flash<'_> {
 
     fn enable_write(&mut self) {
         let transaction = TransferConfig {
-            iwidth: QspiWidth::QUAD,
+            iwidth: QspiWidth::SING,
             awidth: QspiWidth::NONE,
             dwidth: QspiWidth::NONE,
             instruction: WRITE_ENABLE_CMD,
@@ -175,7 +173,7 @@ impl Flash<'_> {
         loop {
             let mut status: [u8; 1] = [0xFF; 1];
             let transaction = TransferConfig {
-                iwidth: QspiWidth::QUAD,
+                iwidth: QspiWidth::SING,
                 awidth: QspiWidth::NONE,
                 dwidth: QspiWidth::QUAD,
                 instruction: READ_STATUS_REGISTRY_CMD,
@@ -195,8 +193,8 @@ impl Flash<'_> {
     fn reset_status_register(&mut self) {
         self.enable_write();
         let transaction = TransferConfig {
-            iwidth: QspiWidth::QUAD,
-            awidth: QspiWidth::QUAD,
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::SING,
             dwidth: QspiWidth::NONE,
             instruction: WRITE_STATUS_REGISTRY_CMD,
             address: Some(0b0000_0010),
@@ -211,25 +209,11 @@ impl Flash<'_> {
     fn reset_read_register(&mut self) {
         self.enable_write();
         let transaction = TransferConfig {
-            iwidth: QspiWidth::QUAD,
-            awidth: QspiWidth::QUAD,
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::SING,
             dwidth: QspiWidth::NONE,
             instruction: SET_READ_PARAMETERS_CMD,
             address: Some(0b1111_1000),
-            dummy: DummyCycles::_0,
-        };
-        self.qspi.blocking_command(transaction);
-        self.wait_for_write();
-    }
-
-    fn enable_qpi_mode(&mut self) {
-        self.enable_write();
-        let transaction = TransferConfig {
-            iwidth: QspiWidth::SING,
-            awidth: QspiWidth::NONE,
-            dwidth: QspiWidth::NONE,
-            instruction: ENTER_QPI_MODE_CMD,
-            address: None,
             dummy: DummyCycles::_0,
         };
         self.qspi.blocking_command(transaction);
