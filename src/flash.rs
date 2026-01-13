@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::hal;
 use crate::pins::FlashPins;
 use embassy_stm32::qspi::enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize};
@@ -11,19 +13,38 @@ use hal::{
 };
 
 // Commands from IS25LP064 datasheet.
-const WRITE_STATUS_REGISTRY_CMD: u8 = 0x01; // WRSR
-const WRITE_CMD: u8 = 0x02; // PP
-const READ_STATUS_REGISTRY_CMD: u8 = 0x05; // RDSR
+const WRITE_CMD: u8 = 0x32; // PPQ
 const WRITE_ENABLE_CMD: u8 = 0x06; // WREN
-const SET_READ_PARAMETERS_CMD: u8 = 0xC0; // SRP
 const SECTOR_ERASE_CMD: u8 = 0xD7; // SER
 const FAST_READ_QUAD_IO_CMD: u8 = 0xEB; // FRQIO
 const RESET_ENABLE_CMD: u8 = 0x66;
 const RESET_MEMORY_CMD: u8 = 0x99;
 
+const WRITE_STATUS_REGISTER_CMD: u8 = 0x01; // WRSR
+const READ_STATUS_REGISTER_CMD: u8 = 0x05; // RDSR
+const STATUS_BIT_WIP: u8 = 1 << 0;
+const STATUS_BIT_WEL: u8 = 1 << 1;
+const STATUS_BIT_BP0: u8 = 1 << 2;
+const STATUS_BIT_BP1: u8 = 1 << 3;
+const STATUS_BIT_BP2: u8 = 1 << 4;
+const STATUS_BIT_BP3: u8 = 1 << 5;
+const STATUS_BIT_QE: u8 = 1 << 6;
+const STATUS_BIT_SRWD: u8 = 1 << 7;
+
+const SET_READ_PARAMETERS_CMD: u8 = 0xC0; // SRP
+const READ_PARAMS_BIT_BL0: u8 = 1 << 0;
+const READ_PARAMS_BIT_BL1: u8 = 1 << 1;
+const READ_PARAMS_BIT_WE: u8 = 1 << 2;
+const READ_PARAMS_BIT_DC0: u8 = 1 << 3;
+const READ_PARAMS_BIT_DC1: u8 = 1 << 4;
+const READ_PARAMS_BIT_ODS0: u8 = 1 << 5;
+const READ_PARAMS_BIT_ODS1: u8 = 1 << 6;
+const READ_PARAMS_BIT_ODS2: u8 = 1 << 7;
+
 // Memory array specifications as defined in the datasheet.
 const SECTOR_SIZE: u32 = 4096;
 const PAGE_SIZE: u32 = 256;
+const MAX_ADDRESS: u32 = 0x7FFFFF;
 
 pub struct FlashBuilder {
     pub pins: FlashPins,
@@ -50,7 +71,6 @@ impl FlashBuilder {
         result
     }
 }
-const MAX_ADDRESS: u32 = 0x7FFFFF;
 
 pub struct Flash<'a> {
     qspi: Qspi<'a, QUADSPI, Blocking>,
@@ -58,7 +78,7 @@ pub struct Flash<'a> {
 
 impl Flash<'_> {
     pub fn read(&mut self, address: u32, buffer: &mut [u8]) {
-        assert!(address <= MAX_ADDRESS);
+        assert!(address + buffer.len() as u32 <= MAX_ADDRESS);
 
         let transaction = TransferConfig {
             iwidth: QspiWidth::SING,
@@ -66,7 +86,7 @@ impl Flash<'_> {
             dwidth: QspiWidth::QUAD,
             instruction: FAST_READ_QUAD_IO_CMD,
             address: Some(address),
-            dummy: DummyCycles::_6,
+            dummy: DummyCycles::_8,
         };
         self.qspi.blocking_read(buffer, transaction);
     }
@@ -79,7 +99,7 @@ impl Flash<'_> {
             dwidth: QspiWidth::QUAD,
             instruction: 0x4B,
             address: Some(0x00),
-            dummy: DummyCycles::_6,
+            dummy: DummyCycles::_8,
         };
         self.qspi.blocking_read(&mut buffer, transaction);
         buffer
@@ -174,22 +194,26 @@ impl Flash<'_> {
 
     fn wait_for_write(&mut self) {
         loop {
-            let mut status: [u8; 1] = [0xFF; 1];
-            let transaction = TransferConfig {
-                iwidth: QspiWidth::SING,
-                awidth: QspiWidth::NONE,
-                dwidth: QspiWidth::QUAD,
-                instruction: READ_STATUS_REGISTRY_CMD,
-                address: None,
-                dummy: DummyCycles::_0,
-            };
-            self.qspi.blocking_read(&mut status, transaction);
-
-            if status[0] & 0x01 == 0 {
+            if self.read_status() & STATUS_BIT_WIP == 0 {
                 break;
             }
         }
     }
+
+    fn read_status(&mut self) -> u8 {
+        let mut status: [u8; 1] = [0xFF; 1];
+        let transaction = TransferConfig {
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::NONE,
+            dwidth: QspiWidth::SING,
+            instruction: READ_STATUS_REGISTER_CMD,
+            address: None,
+            dummy: DummyCycles::_0,
+        };
+        self.qspi.blocking_read(&mut status, transaction);
+        status[0]
+    }
+
     fn reset_memory(&mut self) {
         let transaction = TransferConfig {
             iwidth: QspiWidth::SING,
@@ -216,31 +240,35 @@ impl Flash<'_> {
     /// peripheral is configured as expected.
     fn reset_status_register(&mut self) {
         self.enable_write();
+        let value = STATUS_BIT_QE;
         let transaction = TransferConfig {
             iwidth: QspiWidth::SING,
-            awidth: QspiWidth::SING,
-            dwidth: QspiWidth::NONE,
-            instruction: WRITE_STATUS_REGISTRY_CMD,
-            address: Some(0b0000_0010),
+            awidth: QspiWidth::NONE,
+            dwidth: QspiWidth::SING,
+            instruction: WRITE_STATUS_REGISTER_CMD,
+            address: None,
             dummy: DummyCycles::_0,
         };
-        self.qspi.blocking_command(transaction);
+        self.qspi.blocking_write(&[value], transaction);
         self.wait_for_write();
     }
 
     /// Reset read registers into driver's defaults. This makes sure that the
     /// peripheral is configured as expected.
     fn reset_read_register(&mut self) {
-        self.enable_write();
+        let value = READ_PARAMS_BIT_ODS2
+            | READ_PARAMS_BIT_ODS1
+            | READ_PARAMS_BIT_ODS0
+            | READ_PARAMS_BIT_DC1;
         let transaction = TransferConfig {
             iwidth: QspiWidth::SING,
-            awidth: QspiWidth::SING,
-            dwidth: QspiWidth::NONE,
+            awidth: QspiWidth::NONE,
+            dwidth: QspiWidth::SING,
             instruction: SET_READ_PARAMETERS_CMD,
-            address: Some(0b1111_1000),
+            address: None,
             dummy: DummyCycles::_0,
         };
-        self.qspi.blocking_command(transaction);
+        self.qspi.blocking_write(&[value], transaction);
         self.wait_for_write();
     }
 }
