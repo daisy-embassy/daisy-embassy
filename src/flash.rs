@@ -18,6 +18,8 @@ const WRITE_ENABLE_CMD: u8 = 0x06; // WREN
 const SET_READ_PARAMETERS_CMD: u8 = 0xC0; // SRP
 const SECTOR_ERASE_CMD: u8 = 0xD7; // SER
 const FAST_READ_QUAD_IO_CMD: u8 = 0xEB; // FRQIO
+const RESET_ENABLE_CMD: u8 = 0x66;
+const RESET_MEMORY_CMD: u8 = 0x99;
 
 // Memory array specifications as defined in the datasheet.
 const SECTOR_SIZE: u32 = 4096;
@@ -42,6 +44,7 @@ impl FlashBuilder {
             qspi, pins.IO0, pins.IO1, pins.IO2, pins.IO3, pins.SCK, pins.CS, config,
         );
         let mut result = Flash { qspi };
+        result.reset_memory();
         result.reset_status_register();
         result.reset_read_register();
         result
@@ -186,6 +189,27 @@ impl Flash<'_> {
                 break;
             }
         }
+    }
+    fn reset_memory(&mut self) {
+        let transaction = TransferConfig {
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::NONE,
+            dwidth: QspiWidth::NONE,
+            instruction: RESET_ENABLE_CMD,
+            address: None,
+            dummy: DummyCycles::_0,
+        };
+        self.qspi.blocking_command(transaction);
+
+        let transaction = TransferConfig {
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::NONE,
+            dwidth: QspiWidth::NONE,
+            instruction: RESET_MEMORY_CMD,
+            address: None,
+            dummy: DummyCycles::_0,
+        };
+        self.qspi.blocking_command(transaction);
     }
 
     /// Reset status registers into driver's defaults. This makes sure that the
