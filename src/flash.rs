@@ -1,3 +1,7 @@
+//! Driver for the IS25LP064 Flash chip connected via QSPI
+//! Notes:
+//! 1. The Qspi driver in embassy_stm32 can currently only be used in Blocking mode, because Async would require MDMA, which is unsupported.
+//! 2. The Daisy bootloader (as of v6.3) Does not use QPI mode, and configuring the flash chip that way would cause problems on reset. So for compatibility's sake, we do not use it here either.
 #![allow(unused)]
 
 use crate::hal;
@@ -95,7 +99,7 @@ impl Flash<'_> {
         let mut buffer = [0; 16];
         let transaction: TransferConfig = TransferConfig {
             iwidth: QspiWidth::SING,
-            awidth: QspiWidth::QUAD,
+            awidth: QspiWidth::SING,
             dwidth: QspiWidth::QUAD,
             instruction: 0x4B,
             address: Some(0x00),
@@ -113,7 +117,7 @@ impl Flash<'_> {
         let mut length = data.len() as u32;
         let mut start_cursor = 0;
 
-        //WRITE_CMD(or PP) allows to write up to 256 bytes, which is as much as PAGE_SIZE.
+        //WRITE_CMD(or PPQ) allows to write up to 256 bytes, which is as much as PAGE_SIZE.
         //Let's divide the data into chunks of page size to write to flash
         loop {
             // Calculate number of bytes between address and end of the page.
