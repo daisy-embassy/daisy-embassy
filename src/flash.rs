@@ -100,7 +100,7 @@ impl Flash<'_> {
         let transaction: TransferConfig = TransferConfig {
             iwidth: QspiWidth::SING,
             awidth: QspiWidth::SING,
-            dwidth: QspiWidth::QUAD,
+            dwidth: QspiWidth::SING,
             instruction: 0x4B,
             address: Some(0x00),
             dummy: DummyCycles::_8,
