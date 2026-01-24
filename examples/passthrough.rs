@@ -7,7 +7,7 @@
 #![no_std]
 #![no_main]
 
-use daisy_embassy::{hal, led::UserLed, new_daisy_board, DaisyBoard};
+use daisy_embassy::{DaisyBoard, hal, led::UserLed, new_daisy_board};
 use defmt::{debug, unwrap};
 use embassy_executor::Spawner;
 use embassy_time::Timer;

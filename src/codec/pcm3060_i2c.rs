@@ -135,9 +135,10 @@ impl<'a> Codec<'a> {
     async fn write_pcm3060_reg(&mut self, register: u8, mask: u8, set: bool) {
         // Read current register value
         let mut buffer = [0];
-        unwrap!(self
-            .i2c
-            .blocking_write_read(I2C_CODEC_ADDRESS, &[register], &mut buffer));
+        unwrap!(
+            self.i2c
+                .blocking_write_read(I2C_CODEC_ADDRESS, &[register], &mut buffer)
+        );
 
         // Modify value based on mask and set flag
         let value = if set {
@@ -147,9 +148,10 @@ impl<'a> Codec<'a> {
         };
 
         // Write back modified value
-        unwrap!(self
-            .i2c
-            .blocking_write(I2C_CODEC_ADDRESS, &[register, value]));
+        unwrap!(
+            self.i2c
+                .blocking_write(I2C_CODEC_ADDRESS, &[register, value])
+        );
 
         Timer::after_micros(10).await;
     }
