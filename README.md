@@ -82,7 +82,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 - **probe-rs**: For flashing and debugging, [install probe-rs](https://probe.rs/docs/getting-started/installation/).
 
-- **Hardware**: Supported board (Daisy Seed Rev4, Rev5, or Rev7, or Daisy Patch SM), USB cable, debug probe(e.g. ST-Link V3 Mini).
+- **Hardware**: Supported board (Daisy Seed Rev4, Rev5, or Rev7, or Daisy Patch SM), USB cable, and debug probe(e.g. ST-Link V3 MINIE).
 
 > **Tip**: If probe-rs fails, verify your board connection and check [probe-rs docs](https://probe.rs/docs/overview/about-probe-rs/).
 
