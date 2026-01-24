@@ -42,6 +42,8 @@ critical-section = "1.2.0"
 heapless = { version = "0.8", default-features = false }
 micromath = "2.0.0"
 
+fhx = { git = "https://github.com/daisy-embassy/fhx.git", rev = "25cb1e28cc6fe05cea09b9b1aa21ec43b0bce5bb" }
+
 [features]
 default = ["seed_1_1"]
 
@@ -93,6 +95,9 @@ path = "examples/sdram.rs"
 [[example]]
 name = "flash"
 path = "examples/flash.rs"
+[[example]]
+name = "fhx"
+path = "examples/fhx.rs"
 [[example]]
 name = "usb_serial"
 path = "examples/usb_serial.rs"
