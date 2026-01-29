@@ -12,9 +12,9 @@ categories = ["embedded"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-embassy-stm32 = { version = "0.2.0", features = ["defmt", "stm32h750ib", "time-driver-tim5", "exti", "memory-x", "unstable-pac", "chrono"] }
-embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
-embassy-sync = { version = "0.7.0", features = ["defmt"] }
+embassy-stm32 = { version = "0.5.0", features = ["defmt", "stm32h750ib", "time-driver-tim5", "exti", "memory-x", "unstable-pac", "chrono"] }
+embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768", "generic-queue-8"] }
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
 # these are for developing usb_uac example
 # embassy-stm32 = { path = "../_third_party/embassy/embassy-stm32", features = ["defmt", "stm32h750ib", "time-driver-tim5", "exti", "memory-x", "unstable-pac", "chrono"] }
 # embassy-time = { path = "../_third_party/embassy/embassy-time", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
@@ -24,7 +24,7 @@ static_cell = "2.1.1"
 defmt = "1.0.1"
 grounded = "0.2.0"
 wm8731 = "0.1.0"
-stm32-fmc = "0.3.0"
+stm32-fmc = "0.4.0"
 
 [dev-dependencies]
 cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
@@ -32,8 +32,8 @@ cortex-m-rt = { version = "0.7.0", features = ["device"] }
 defmt-rtt = "1.0.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 embassy-executor = { version = "0.7.0", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
-embassy-futures = "0.1.1"
-embassy-usb = "0.4.0"
+embassy-futures = "0.1.2"
+embassy-usb = "0.5.1"
 # these are for developing usb_uac example
 # embassy-executor = { path = "../_third_party/embassy/embassy-executor", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "integrated-timers"] }
 # embassy-futures = { path = "../_third_party/embassy/embassy-futures" }

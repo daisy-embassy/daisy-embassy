@@ -7,10 +7,15 @@ use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, hal, new_daisy_board};
 use defmt::{debug, unwrap};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
+use embassy_stm32::{bind_interrupts, exti, interrupt};
 use embassy_time::Timer;
 use hal::gpio::Pull;
 use hal::{exti::ExtiInput, gpio::Input};
 use {defmt_rtt as _, panic_probe as _};
+
+bind_interrupts!(pub struct Irqs{
+    EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
+});
 
 #[derive(Clone, Copy)]
 enum WaveFrequency {
@@ -57,13 +62,13 @@ async fn main(_spawner: Spawner) {
     #[cfg(any(feature = "seed", feature = "seed_1_1", feature = "seed_1_2"))]
     {
         mute = Input::new(board.pins.d15, Pull::Up);
-        change_freq = ExtiInput::new(board.pins.d16, p.EXTI3, Pull::Up);
+        change_freq = ExtiInput::new(board.pins.d16, p.EXTI3, Pull::Up, Irqs);
     }
 
     #[cfg(feature = "patch_sm")]
     {
         mute = Input::new(board.pins.b8, Pull::Up);
-        change_freq = ExtiInput::new(board.pins.b7, p.EXTI8, Pull::Up);
+        change_freq = ExtiInput::new(board.pins.c5, p.EXTI3, Pull::Up, Irqs);
     }
 
     let wave_freq = AtomicU8::new(0);

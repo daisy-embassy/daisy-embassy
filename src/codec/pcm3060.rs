@@ -1,5 +1,5 @@
 use defmt::info;
-use embassy_stm32::{self as hal, peripherals, sai};
+use embassy_stm32::{self as hal, Peri, peripherals, sai};
 use hal::peripherals::*;
 
 use crate::audio::{AudioConfig, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
@@ -14,7 +14,7 @@ pub struct Codec<'a> {
 
 impl<'a> Codec<'a> {
     pub async fn new(
-        p: AudioPeripherals,
+        p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
@@ -94,10 +94,10 @@ impl<'a> Codec<'a> {
 }
 
 #[allow(non_snake_case)]
-pub struct Pins {
-    pub MCLK_A: PE2, // SAI1 MCLK_A
-    pub SCK_A: PE5,  // SAI1 SCK_A
-    pub FS_A: PE4,   // SAI1 FS_A
-    pub SD_A: PE6,   // SAI1 SD_A
-    pub SD_B: PE3,   // SAI1 SD_B
+pub struct Pins<'a> {
+    pub MCLK_A: Peri<'a, PE2>, // SAI1 MCLK_A
+    pub SCK_A: Peri<'a, PE5>,  // SAI1 SCK_A
+    pub FS_A: Peri<'a, PE4>,   // SAI1 FS_A
+    pub SD_A: Peri<'a, PE6>,   // SAI1 SD_A
+    pub SD_B: Peri<'a, PE3>,   // SAI1 SD_B
 }

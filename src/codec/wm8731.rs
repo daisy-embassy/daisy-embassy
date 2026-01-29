@@ -1,5 +1,5 @@
 use embassy_stm32::{
-    self as hal, peripherals,
+    self as hal, Peri, peripherals,
     sai::{
         self, BitOrder, ClockStrobe, DataSize, FifoThreshold, FrameSyncOffset, FrameSyncPolarity,
         Mode, StereoMono, SyncInput, TxRx,
@@ -17,7 +17,7 @@ const I2C_FS: Hertz = Hertz(100_000);
 
 /// A simple HAL for the Cirrus Logic/ Wolfson WM8731 audio codec
 pub struct Codec<'a> {
-    i2c: hal::i2c::I2c<'a, hal::mode::Blocking>,
+    i2c: hal::i2c::I2c<'a, hal::mode::Blocking, hal::i2c::Master>,
     sai_tx: sai::Sai<'a, peripherals::SAI1, u32>,
     sai_rx: sai::Sai<'a, peripherals::SAI1, u32>,
     pub sai_tx_config: sai::Config,
@@ -26,18 +26,18 @@ pub struct Codec<'a> {
 
 impl<'a> Codec<'a> {
     pub async fn new(
-        p: AudioPeripherals,
+        p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
     ) -> Self {
         info!("set up i2c");
-        let i2c_config = hal::i2c::Config::default();
+        let mut i2c_config = hal::i2c::Config::default();
+        i2c_config.frequency = I2C_FS;
         let i2c = embassy_stm32::i2c::I2c::new_blocking(
             p.i2c2,
             p.codec_pins.SCL,
             p.codec_pins.SDA,
-            I2C_FS,
             i2c_config,
         );
 
@@ -224,7 +224,7 @@ impl<'a> Codec<'a> {
     ) -> (
         sai::Sai<'a, SAI1, u32>,
         sai::Sai<'a, SAI1, u32>,
-        hal::i2c::I2c<'a, hal::mode::Blocking>,
+        hal::i2c::I2c<'a, hal::mode::Blocking, hal::i2c::Master>,
     ) {
         (self.sai_tx, self.sai_rx, self.i2c)
     }
@@ -239,12 +239,12 @@ impl<'a> Codec<'a> {
 }
 
 #[allow(non_snake_case)]
-pub struct Pins {
-    pub SCL: PH4,    // I2C SCL
-    pub SDA: PB11,   // I2C SDA
-    pub MCLK_A: PE2, // SAI1 MCLK_A
-    pub SCK_A: PE5,  // SAI1 SCK_A
-    pub FS_A: PE4,   // SAI1 FS_A
-    pub SD_A: PE6,   // SAI1 SD_A
-    pub SD_B: PE3,   // SAI1 SD_B
+pub struct Pins<'a> {
+    pub SCL: Peri<'a, PH4>,    // I2C SCL
+    pub SDA: Peri<'a, PB11>,   // I2C SDA
+    pub MCLK_A: Peri<'a, PE2>, // SAI1 MCLK_A
+    pub SCK_A: Peri<'a, PE5>,  // SAI1 SCK_A
+    pub FS_A: Peri<'a, PE4>,   // SAI1 FS_A
+    pub SD_A: Peri<'a, PE6>,   // SAI1 SD_A
+    pub SD_B: Peri<'a, PE3>,   // SAI1 SD_B
 }

@@ -1,19 +1,19 @@
 use crate::pins::SdRamPins;
 use cortex_m::peripheral::{MPU, SCB};
-use embassy_stm32 as hal;
+use embassy_stm32::{self as hal, Peri};
 use hal::fmc::Fmc;
 use hal::peripherals::FMC;
 use stm32_fmc::Sdram;
 pub use stm32_fmc::devices::as4c16m32msa_6::As4c16m32msa as FmcDevice;
 
 pub const SDRAM_SIZE: usize = 64 * 1024 * 1024;
-pub struct SdRamBuilder {
-    pub pins: SdRamPins,
-    pub instance: FMC,
+pub struct SdRamBuilder<'a> {
+    pub pins: SdRamPins<'a>,
+    pub instance: Peri<'a, FMC>,
 }
 
-impl SdRamBuilder {
-    pub fn build<'a>(self, mpu: &mut MPU, scb: &mut SCB) -> Sdram<Fmc<'a, FMC>, FmcDevice> {
+impl<'a> SdRamBuilder<'a> {
+    pub fn build(self, mpu: &mut MPU, scb: &mut SCB) -> Sdram<Fmc<'a, FMC>, FmcDevice> {
         // Configure MPU for external SDRAM
         // MPU config for SDRAM write-through
         // Refer to ARM®v7-M Architecture Reference Manual ARM DDI 0403
