@@ -139,7 +139,7 @@ mod flash {
                     dummy: DummyCycles::_0,
                 };
 
-                self.qspi.command(transaction);
+                self.qspi.blocking_command(transaction);
                 self.wait_for_write();
 
                 // Calculate number of bytes between address and end of the sector.
@@ -166,7 +166,7 @@ mod flash {
                 address: None,
                 dummy: DummyCycles::_0,
             };
-            self.qspi.command(transaction);
+            self.qspi.blocking_command(transaction);
         }
 
         fn wait_for_write(&mut self) {
@@ -200,7 +200,7 @@ mod flash {
                 address: Some(0b0000_0010),
                 dummy: DummyCycles::_0,
             };
-            self.qspi.command(transaction);
+            self.qspi.blocking_command(transaction);
             self.wait_for_write();
         }
 
@@ -216,7 +216,7 @@ mod flash {
                 address: Some(0b1111_1000),
                 dummy: DummyCycles::_0,
             };
-            self.qspi.command(transaction);
+            self.qspi.blocking_command(transaction);
             self.wait_for_write();
         }
 
@@ -230,7 +230,7 @@ mod flash {
                 address: None,
                 dummy: DummyCycles::_0,
             };
-            self.qspi.command(transaction);
+            self.qspi.blocking_command(transaction);
             self.wait_for_write();
         }
     }
@@ -241,13 +241,13 @@ async fn main(_spawner: Spawner) {
     let config = daisy_embassy::default_rcc();
     let p = hal::init(config);
 
-    let config = hal::qspi::Config {
-        memory_size: MemorySize::_8MiB,
-        address_size: AddressSize::_24bit,
-        prescaler: 1,
-        cs_high_time: ChipSelectHighTime::_2Cycle,
-        fifo_threshold: FIFOThresholdLevel::_1Bytes,
-    };
+    let mut config = hal::qspi::Config::default();
+
+    config.memory_size = MemorySize::_8MiB;
+    config.address_size = AddressSize::_24bit;
+    config.prescaler = 1;
+    config.cs_high_time = ChipSelectHighTime::_2Cycle;
+    config.fifo_threshold = FIFOThresholdLevel::_1Bytes;
 
     let qspi =
         Qspi::new_blocking_bank1(p.QUADSPI, p.PF8, p.PF9, p.PF7, p.PF6, p.PF10, p.PG6, config);

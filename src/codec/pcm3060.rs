@@ -1,8 +1,7 @@
+use crate::audio::{AudioConfig, AudioIrqs, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
 use defmt::info;
 use embassy_stm32::{self as hal, Peri, peripherals, sai};
 use hal::peripherals::*;
-
-use crate::audio::{AudioConfig, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
 
 /// Codec and Pins for the PCM3060 audio codec configured by hardware (not using i2c)
 pub struct Codec<'a> {
@@ -13,11 +12,12 @@ pub struct Codec<'a> {
 }
 
 impl<'a> Codec<'a> {
-    pub async fn new(
+    pub async fn new<I: AudioIrqs + 'a>(
         p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
+        irqs: I,
     ) -> Self {
         info!("set up PCM3060");
         info!("set up sai");
@@ -52,6 +52,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.MCLK_A,
             p.dma1_ch0,
             tx_buffer,
+            irqs,
             sai_tx_config,
         );
         let sai_rx = sai::Sai::new_synchronous(
@@ -59,6 +60,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.SD_B,
             p.dma1_ch1,
             rx_buffer,
+            irqs,
             sai_rx_config,
         );
 
