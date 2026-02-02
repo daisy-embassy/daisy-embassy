@@ -4,8 +4,15 @@
 use daisy_embassy::new_daisy_board;
 use defmt::{error, info};
 use embassy_executor::Spawner;
+use embassy_stm32::{bind_interrupts, dma, qspi};
 
 use {defmt_rtt as _, panic_probe as _};
+
+bind_interrupts!(
+    pub struct Irqs{
+        QUADSPI => qspi::InterruptHandler<embassy_stm32::peripherals::QUADSPI>;
+        MDMA => dma::InterruptHandler<embassy_stm32::peripherals::MDMA_CH0>;
+});
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -17,7 +24,7 @@ async fn main(_spawner: Spawner) {
     const ADDRESS: u32 = 0x00;
     const SIZE: usize = 8000;
 
-    let mut flash = daisy_p.flash.build();
+    let mut flash = daisy_p.flash.build_async(p.MDMA_CH0, Irqs);
 
     info!("uuid: {}", flash.read_uuid());
     // Create an array of data to write.
@@ -29,12 +36,12 @@ async fn main(_spawner: Spawner) {
 
     // Write it to the flash memory.
     info!("Writting to flash");
-    flash.write(ADDRESS, &data);
+    flash.write_async(ADDRESS, &data).await;
 
     // Read it back.
     info!("Reading from flash");
     let mut buffer: [u8; SIZE] = [0; SIZE];
-    flash.read(ADDRESS, &mut buffer);
+    flash.read_async(ADDRESS, &mut buffer).await;
     info!("Read buffer: {:?}", buffer[0..32]);
 
     if data == buffer {

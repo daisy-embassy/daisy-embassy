@@ -1,15 +1,21 @@
 //! Driver for the IS25LP064 Flash chip connected via QSPI
-//! Notes:
-//! 1. The Qspi driver in embassy_stm32 can currently only be used in Blocking mode, because Async would require MDMA, which is unsupported.
-//! 2. The Daisy bootloader (as of v6.3) Does not use QPI mode, and configuring the flash chip that way would cause problems on reset. So for compatibility's sake, we do not use it here either.
+//! Note:
+//! The Daisy bootloader (as of v6.3) Does not use QPI mode, and configuring the flash chip that way would cause problems on reset. So for compatibility's sake, we do not use it here either.
 #![allow(unused)]
 
 use crate::hal;
 use crate::pins::FlashPins;
 use embassy_stm32::{
     Peri,
-    qspi::enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize},
+    dma::{self},
+    interrupt::{self, typelevel::Binding},
+    mode::{Async, Mode},
+    qspi::{
+        Instance, InterruptHandler, MatchMode, QuadDma,
+        enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize},
+    },
 };
+use embassy_time::{Duration, WithTimeout};
 use hal::{
     mode::Blocking,
     peripherals::QUADSPI,
@@ -53,13 +59,49 @@ const SECTOR_SIZE: u32 = 4096;
 const PAGE_SIZE: u32 = 256;
 const MAX_ADDRESS: u32 = 0x7FFFFF;
 
+// Max Sector Erase time is 300ms
+const SECTOR_ERASE_TIMEOUT: Duration = Duration::from_millis(600);
+
+// Max Page Write time is 0.8ms
+const PAGE_WRITE_TIMEOUT: Duration = Duration::from_micros(1600);
+
 pub struct FlashBuilder<'a> {
     pub pins: FlashPins<'a>,
     pub qspi: Peri<'a, QUADSPI>,
 }
 
 impl<'a> FlashBuilder<'a> {
-    pub fn build(self) -> Flash<'a> {
+    pub fn build(self) -> Flash<'a, Blocking> {
+        let config = self.config();
+        let Self { pins, qspi } = self;
+
+        let qspi = Qspi::new_blocking_bank1(
+            qspi, pins.IO0, pins.IO1, pins.IO2, pins.IO3, pins.SCK, pins.CS, config,
+        );
+        let mut result = Flash { qspi };
+        result.reset();
+        result
+    }
+
+    pub fn build_async<D, I>(self, dma_ch: Peri<'a, D>, irq: I) -> Flash<'a, Async>
+    where
+        D: QuadDma<QUADSPI>,
+        I: Binding<D::Interrupt, dma::InterruptHandler<D>>
+            + Binding<<QUADSPI as Instance>::Interrupt, InterruptHandler<QUADSPI>>
+            + 'a,
+    {
+        let config = self.config();
+        let Self { pins, qspi } = self;
+
+        let qspi = Qspi::new_bank1(
+            qspi, pins.IO0, pins.IO1, pins.IO2, pins.IO3, pins.SCK, pins.CS, dma_ch, irq, config,
+        );
+        let mut result = Flash { qspi };
+        result.reset();
+        result
+    }
+
+    fn config(&self) -> hal::qspi::Config {
         let mut config = hal::qspi::Config::default();
 
         config.memory_size = MemorySize::_8MiB;
@@ -67,24 +109,15 @@ impl<'a> FlashBuilder<'a> {
         config.prescaler = 1;
         config.cs_high_time = ChipSelectHighTime::_2Cycle;
         config.fifo_threshold = FIFOThresholdLevel::_1Bytes;
-
-        let Self { pins, qspi } = self;
-        let qspi = Qspi::new_blocking_bank1(
-            qspi, pins.IO0, pins.IO1, pins.IO2, pins.IO3, pins.SCK, pins.CS, config,
-        );
-        let mut result = Flash { qspi };
-        result.reset_memory();
-        result.reset_status_register();
-        result.reset_read_register();
-        result
+        config
     }
 }
 
-pub struct Flash<'a> {
-    qspi: Qspi<'a, QUADSPI, Blocking>,
+pub struct Flash<'a, MODE: Mode> {
+    qspi: Qspi<'a, QUADSPI, MODE>,
 }
 
-impl Flash<'_> {
+impl<MODE: Mode> Flash<'_, MODE> {
     pub fn read(&mut self, address: u32, buffer: &mut [u8]) {
         assert!(address + buffer.len() as u32 <= MAX_ADDRESS);
 
@@ -278,5 +311,126 @@ impl Flash<'_> {
         };
         self.qspi.blocking_write(&[value], transaction);
         self.wait_for_write();
+    }
+
+    fn reset(&mut self) {
+        self.reset_memory();
+        self.reset_status_register();
+        self.reset_read_register();
+    }
+}
+
+impl Flash<'_, Async> {
+    pub async fn read_async(&mut self, address: u32, buffer: &mut [u8]) {
+        assert!(address + buffer.len() as u32 <= MAX_ADDRESS);
+
+        let transaction = TransferConfig {
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::QUAD,
+            dwidth: QspiWidth::QUAD,
+            instruction: FAST_READ_QUAD_IO_CMD,
+            address: Some(address),
+            dummy: DummyCycles::_8,
+        };
+        self.qspi.read_dma(buffer, transaction).await;
+    }
+
+    pub async fn write_async(&mut self, mut address: u32, data: &[u8]) {
+        assert!(address <= MAX_ADDRESS);
+        assert!(!data.is_empty());
+        self.erase_async(address, data.len() as u32).await;
+        let mut length = data.len() as u32;
+        let mut start_cursor = 0;
+
+        //WRITE_CMD(or PPQ) allows to write up to 256 bytes, which is as much as PAGE_SIZE.
+        //Let's divide the data into chunks of page size to write to flash
+        loop {
+            // Calculate number of bytes between address and end of the page.
+            let page_remainder = PAGE_SIZE - (address & (PAGE_SIZE - 1));
+            let size = page_remainder.min(length) as usize;
+            self.enable_write();
+            let transaction = TransferConfig {
+                iwidth: QspiWidth::SING,
+                awidth: QspiWidth::SING,
+                dwidth: QspiWidth::QUAD,
+                instruction: WRITE_CMD,
+                address: Some(address),
+                dummy: DummyCycles::_0,
+            };
+
+            self.qspi
+                .write_dma(&data[start_cursor..start_cursor + size], transaction)
+                .await;
+            self.wait_for_write_async(PAGE_WRITE_TIMEOUT).await;
+            start_cursor += size;
+
+            // Stop if this was the last needed page.
+            if length <= page_remainder {
+                break;
+            }
+            length -= page_remainder;
+
+            // Jump to the next page.
+            address += page_remainder;
+            address %= MAX_ADDRESS;
+        }
+    }
+
+    pub async fn erase_async(&mut self, mut address: u32, mut length: u32) {
+        assert!(address <= MAX_ADDRESS);
+        assert!(length > 0);
+
+        loop {
+            // Erase the sector.
+            self.enable_write();
+            let transaction = TransferConfig {
+                iwidth: QspiWidth::SING,
+                awidth: QspiWidth::SING,
+                dwidth: QspiWidth::NONE,
+                instruction: SECTOR_ERASE_CMD,
+                address: Some(address),
+                dummy: DummyCycles::_0,
+            };
+            self.qspi.blocking_command(transaction);
+
+            self.wait_for_write_async(SECTOR_ERASE_TIMEOUT).await;
+
+            // Calculate number of bytes between address and end of the sector.
+            let sector_remainder = SECTOR_SIZE - (address & (SECTOR_SIZE - 1));
+
+            // Stop if this was the last affected sector.
+            if length <= sector_remainder {
+                break;
+            }
+            length -= sector_remainder;
+
+            // Jump to the next sector.
+            address += sector_remainder;
+            address %= MAX_ADDRESS;
+        }
+    }
+
+    async fn wait_for_write_async(&mut self, timeout: Duration) {
+        let transaction = TransferConfig {
+            iwidth: QspiWidth::SING,
+            awidth: QspiWidth::NONE,
+            dwidth: QspiWidth::SING,
+            instruction: READ_STATUS_REGISTER_CMD,
+            address: None,
+            dummy: DummyCycles::_0,
+        };
+
+        self.qspi
+            .auto_poll(
+                transaction,
+                0x10,
+                STATUS_BIT_WIP as u32,
+                0,
+                1,
+                MatchMode::AND,
+            )
+            .with_timeout(timeout)
+            .await
+            .expect("Flash Timed out waiting for status match")
     }
 }
