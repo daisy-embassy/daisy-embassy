@@ -148,7 +148,7 @@ checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
 name = "daisy-embassy"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
