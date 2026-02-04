@@ -1,9 +1,9 @@
-use embassy_stm32 as hal;
+use embassy_stm32::{self as hal, Peri};
 use hal::gpio::{self, Speed};
 pub struct UserLed<'a>(gpio::Output<'a>);
 
-impl UserLed<'_> {
-    pub fn new(pin: hal::peripherals::PC7) -> Self {
+impl<'a> UserLed<'a> {
+    pub fn new(pin: Peri<'a, hal::peripherals::PC7>) -> Self {
         Self(gpio::Output::new(pin, gpio::Level::Low, Speed::Low))
     }
     pub fn on(&mut self) {

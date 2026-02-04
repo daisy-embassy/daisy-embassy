@@ -1,5 +1,5 @@
 use embassy_stm32::{
-    self as hal,
+    self as hal, Peri,
     gpio::{Level, Output, Speed},
     peripherals,
 };
@@ -25,7 +25,7 @@ pub struct Codec<'a> {
 
 impl<'a> Codec<'a> {
     pub async fn new(
-        p: AudioPeripherals,
+        p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
@@ -114,11 +114,11 @@ impl<'a> Codec<'a> {
 }
 
 #[allow(non_snake_case)]
-pub struct Pins {
-    pub MCLK_A: PE2,
-    pub SCK_A: PE5,
-    pub FS_A: PE4,
-    pub SD_A: PE6,
-    pub SD_B: PE3,
-    pub RESET: PB11,
+pub struct Pins<'a> {
+    pub MCLK_A: Peri<'a, PE2>,
+    pub SCK_A: Peri<'a, PE5>,
+    pub FS_A: Peri<'a, PE4>,
+    pub SD_A: Peri<'a, PE6>,
+    pub SD_B: Peri<'a, PE3>,
+    pub RESET: Peri<'a, PB11>,
 }

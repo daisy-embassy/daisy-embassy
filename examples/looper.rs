@@ -12,9 +12,9 @@ use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, hal, new_daisy_board, sdram::
 use defmt::{debug, info, unwrap};
 use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_stm32::fmc::Fmc;
-use embassy_stm32::interrupt;
 use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::peripherals::FMC;
+use embassy_stm32::{bind_interrupts, exti, interrupt};
 use embassy_stm32::{exti::ExtiInput, gpio::Pull};
 use embassy_time::{Delay, Timer};
 use stm32_fmc::Sdram;
@@ -30,6 +30,10 @@ static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
 unsafe fn SAI1() {
     unsafe { AUDIO_EXECUTOR.on_interrupt() }
 }
+
+bind_interrupts!(pub struct Irqs{
+    EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
+});
 
 #[embassy_executor::task]
 async fn run_audio(
@@ -101,11 +105,15 @@ async fn main(_spawner: Spawner) {
         .await;
     let sdram = board.sdram.build(&mut c.MPU, &mut c.SCB);
 
+    // Feature flags are needed because of the different pin mappings.
+    // The same underlying MCU pin is used in both cases
     #[cfg(any(feature = "seed", feature = "seed_1_1", feature = "seed_1_2"))]
-    let mut record_pin = ExtiInput::new(board.pins.d16, p.EXTI3, Pull::Up);
+    let pin = board.pins.d16;
 
     #[cfg(feature = "patch_sm")]
-    let mut record_pin = ExtiInput::new(board.pins.b7, p.EXTI8, Pull::Up);
+    let pin = board.pins.c5;
+
+    let mut record_pin = ExtiInput::new(pin, p.EXTI3, Pull::Up, Irqs);
 
     let record_fut = async {
         loop {

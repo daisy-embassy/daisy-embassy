@@ -6,7 +6,10 @@
 
 use crate::hal;
 use crate::pins::FlashPins;
-use embassy_stm32::qspi::enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize};
+use embassy_stm32::{
+    Peri,
+    qspi::enums::{AddressSize, ChipSelectHighTime, FIFOThresholdLevel, MemorySize},
+};
 use hal::{
     mode::Blocking,
     peripherals::QUADSPI,
@@ -50,20 +53,21 @@ const SECTOR_SIZE: u32 = 4096;
 const PAGE_SIZE: u32 = 256;
 const MAX_ADDRESS: u32 = 0x7FFFFF;
 
-pub struct FlashBuilder {
-    pub pins: FlashPins,
-    pub qspi: QUADSPI,
+pub struct FlashBuilder<'a> {
+    pub pins: FlashPins<'a>,
+    pub qspi: Peri<'a, QUADSPI>,
 }
 
-impl FlashBuilder {
-    pub fn build<'a>(self) -> Flash<'a> {
-        let config = hal::qspi::Config {
-            memory_size: MemorySize::_8MiB,
-            address_size: AddressSize::_24bit,
-            prescaler: 1,
-            cs_high_time: ChipSelectHighTime::_2Cycle,
-            fifo_threshold: FIFOThresholdLevel::_1Bytes,
-        };
+impl<'a> FlashBuilder<'a> {
+    pub fn build(self) -> Flash<'a> {
+        let mut config = hal::qspi::Config::default();
+
+        config.memory_size = MemorySize::_8MiB;
+        config.address_size = AddressSize::_24bit;
+        config.prescaler = 1;
+        config.cs_high_time = ChipSelectHighTime::_2Cycle;
+        config.fifo_threshold = FIFOThresholdLevel::_1Bytes;
+
         let Self { pins, qspi } = self;
         let qspi = Qspi::new_blocking_bank1(
             qspi, pins.IO0, pins.IO1, pins.IO2, pins.IO3, pins.SCK, pins.CS, config,
