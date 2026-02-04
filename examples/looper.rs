@@ -105,7 +105,8 @@ async fn main(_spawner: Spawner) {
         .await;
     let sdram = board.sdram.build(&mut c.MPU, &mut c.SCB);
 
-    //
+    // Feature flags are needed because of the different pin mappings.
+    // The same underlying MCU pin is used in both cases
     #[cfg(any(feature = "seed", feature = "seed_1_1", feature = "seed_1_2"))]
     let pin = board.pins.d16;
 
