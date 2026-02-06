@@ -61,12 +61,12 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
 
 | Board               | Revision | Codec   | Status        | Tested |
 |---------------------|----------|---------|---------------|-------------------------|
-| Daisy Seed 1.1      | Rev5     | WM8731  | ✅ Supported  | 0.2.3  |
+| Daisy Seed 1.1      | Rev5     | WM8731  | ✅ Supported  | 0.3.0(unreleased)  |
 | Daisy Seed 1.2      | Rev7     | PCM3060 | ✅ Supported  | 0.2.2  |
-| Daisy Seed (AK4556) | Rev4     | AK4556  | ✅ Supported  | 0.2.3  |
-| Daisy Patch SM      | -        | PCM3060 | ✅ Supported  | 0.2.3  |
+| Daisy Seed (AK4556) | Rev4     | AK4556  | ✅ Supported  | 0.3.0(unreleased)  |
+| Daisy Patch SM      | -        | PCM3060 | ✅ Supported  | 0.3.0(unreleased)  |
 
-[Test reports and confirmations for `0.2.3` on Daisy Seed 1.2 are very welcome.](https://github.com/daisy-embassy/daisy-embassy/issues/59)
+[Test reports and confirmations for `0.3.0(unreleased)` on Daisy Seed 1.2 are very welcome.](https://github.com/daisy-embassy/daisy-embassy/issues/59)
 
 ---
 
