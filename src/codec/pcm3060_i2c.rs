@@ -1,8 +1,8 @@
 //! A simple HAL for the Texas Instruments PCM3060 audio codec
-use embassy_stm32::{self as hal, Peri, peripherals, sai, time::Hertz};
+use crate::audio::{AudioConfig, AudioIrqs, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
+use embassy_stm32::Peri;
+use embassy_stm32::{self as hal, peripherals, sai, time::Hertz};
 use hal::peripherals::*;
-
-use crate::audio::{AudioConfig, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
 
 use defmt::{info, unwrap};
 use embassy_time::Timer;
@@ -33,11 +33,12 @@ pub struct Codec<'a> {
 }
 
 impl<'a> Codec<'a> {
-    pub async fn new(
+    pub async fn new<I: AudioIrqs + 'a>(
         p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
+        irqs: I,
     ) -> Self {
         info!("set up i2c");
         let mut i2c_config = hal::i2c::Config::default();
@@ -84,6 +85,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.SD_B,
             p.dma1_ch1,
             tx_buffer,
+            irqs,
             sai_tx_config,
         );
 
@@ -95,6 +97,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.MCLK_A,
             p.dma1_ch0,
             rx_buffer,
+            irqs,
             sai_rx_config,
         );
 

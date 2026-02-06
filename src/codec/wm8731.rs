@@ -11,7 +11,7 @@ use hal::peripherals::*;
 use defmt::{info, unwrap};
 use embassy_time::Timer;
 
-use crate::audio::{AudioConfig, AudioPeripherals, Fs};
+use crate::audio::{AudioConfig, AudioIrqs, AudioPeripherals, Fs};
 
 const I2C_FS: Hertz = Hertz(100_000);
 
@@ -25,11 +25,12 @@ pub struct Codec<'a> {
 }
 
 impl<'a> Codec<'a> {
-    pub async fn new(
+    pub async fn new<I: AudioIrqs + 'a>(
         p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
+        irqs: I,
     ) -> Self {
         info!("set up i2c");
         let mut i2c_config = hal::i2c::Config::default();
@@ -70,6 +71,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.SD_B,
             p.dma1_ch1,
             tx_buffer,
+            irqs,
             sai_tx_config,
         );
 
@@ -81,6 +83,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.MCLK_A,
             p.dma1_ch2,
             rx_buffer,
+            irqs,
             sai_rx_config,
         );
 

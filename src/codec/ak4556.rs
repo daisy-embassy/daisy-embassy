@@ -7,7 +7,7 @@ use hal::peripherals::*;
 
 use embassy_time::Timer;
 
-use crate::audio::{AudioConfig, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
+use crate::audio::{AudioConfig, AudioIrqs, AudioPeripherals, HALF_DMA_BUFFER_LENGTH};
 use defmt::info;
 use hal::sai::FifoThreshold;
 use hal::sai::FrameSyncOffset;
@@ -24,11 +24,12 @@ pub struct Codec<'a> {
 }
 
 impl<'a> Codec<'a> {
-    pub async fn new(
+    pub async fn new<I: AudioIrqs + 'a>(
         p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
+        irqs: I,
     ) -> Self {
         info!("set up AK4556");
 
@@ -67,6 +68,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.MCLK_A,
             p.dma1_ch1,
             tx_buffer,
+            irqs,
             sai_tx_config,
         );
 
@@ -75,6 +77,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.SD_B,
             p.dma1_ch2,
             rx_buffer,
+            irqs,
             sai_rx_config,
         );
 

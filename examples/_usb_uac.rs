@@ -2,12 +2,13 @@
 #![no_main]
 
 use core::cell::RefCell;
+use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 use daisy_embassy::audio::HALF_DMA_BUFFER_LENGTH;
 use defmt::{panic, *};
 use embassy_executor::Spawner;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::{bind_interrupts, interrupt, peripherals, timer, usb};
+use embassy_stm32::{bind_interrupts, dma, interrupt, peripherals, timer, usb};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::signal::Signal;
@@ -23,6 +24,9 @@ use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
     OTG_FS => usb::InterruptHandler<peripherals::USB_OTG_FS>;
+    DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
+    DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
+    DMA1_STREAM2 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH2>;
 });
 
 static TIMER: Mutex<
@@ -143,11 +147,14 @@ async fn stream_handler<'d, T: usb::Instance + 'd>(
 /// Receives audio samples from the USB streaming task and can play them back.
 #[embassy_executor::task]
 async fn audio_receiver_task(
-    audio_p: daisy_embassy::audio::AudioPeripherals,
+    audio_p: daisy_embassy::audio::AudioPeripherals<'static>,
     mut usb_audio_receiver: zerocopy_channel::Receiver<'static, NoopRawMutex, SampleBlock>,
 ) {
-    let interface = audio_p.prepare_interface(Default::default()).await;
-    let (mut sai_tx, mut sai_rx, _) = interface.setup_and_release().await;
+    let interface = audio_p.prepare_interface(Default::default(), Irqs).await;
+    let (mut sai_tx, mut sai_rx, _) = interface
+        .setup_and_release()
+        .await
+        .expect("sai setup error");
     let mut queue = heapless::Vec::<u32, { USB_MAX_SAMPLE_COUNT * 16 }>::new();
 
     loop {
@@ -221,7 +228,7 @@ async fn usb_control_task(control_monitor: speaker::ControlMonitor<'static>) {
         control_monitor.changed().await;
 
         for channel in AUDIO_CHANNELS {
-            let volume = control_monitor.volume(channel).unwrap();
+            let _volume = control_monitor.volume(channel).unwrap();
             // info!("Volume changed to {} on channel {}.", volume, channel);
         }
     }
@@ -243,10 +250,10 @@ async fn usb_control_task(control_monitor: speaker::ControlMonitor<'static>) {
 /// requires wiring the MCLK output to the timer clock input.
 #[interrupt]
 fn TIM2() {
-    static mut LAST_TICKS: u32 = 0;
-    static mut FRAME_COUNT: usize = 0;
+    static LAST_TICKS: AtomicU32 = AtomicU32::new(0);
+    static FRAME_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-    critical_section::with(|cs| {
+    let ticks = critical_section::with(|cs| {
         // Read timer counter.
         let ticks = TIMER
             .borrow(cs)
@@ -267,14 +274,16 @@ fn TIM2() {
             .sr()
             .modify(|r| r.set_tif(false));
 
-        // Count up frames and emit a signal, when the refresh period is reached (here, every 8 ms).
-        *FRAME_COUNT += 1;
-        if *FRAME_COUNT >= FEEDBACK_REFRESH_PERIOD.frame_count() {
-            *FRAME_COUNT = 0;
-            FEEDBACK_SIGNAL.signal(ticks.wrapping_sub(*LAST_TICKS));
-            *LAST_TICKS = ticks;
-        }
+        ticks
     });
+    // Count up frames and emit a signal, when the refresh period is reached (here, every 8 ms).
+    let prev_count = FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
+    if (prev_count + 1) >= FEEDBACK_REFRESH_PERIOD.frame_count() {
+        FRAME_COUNT.store(0, Ordering::Relaxed);
+        let last_ticks = LAST_TICKS.load(Ordering::Relaxed);
+        FEEDBACK_SIGNAL.signal(ticks.wrapping_sub(last_ticks));
+        LAST_TICKS.store(ticks, Ordering::Relaxed);
+    }
 }
 
 // If you are trying this and your USB device doesn't connect, the most

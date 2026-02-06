@@ -14,7 +14,7 @@ use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_stm32::fmc::Fmc;
 use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::peripherals::FMC;
-use embassy_stm32::{bind_interrupts, exti, interrupt};
+use embassy_stm32::{bind_interrupts, dma, exti, interrupt};
 use embassy_stm32::{exti::ExtiInput, gpio::Pull};
 use embassy_time::{Delay, Timer};
 use stm32_fmc::Sdram;
@@ -31,8 +31,12 @@ unsafe fn SAI1() {
     unsafe { AUDIO_EXECUTOR.on_interrupt() }
 }
 
-bind_interrupts!(pub struct Irqs{
-    EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
+bind_interrupts!(
+    pub struct Irqs{
+        EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
+        DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
+        DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
+        DMA1_STREAM2 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH2>;
 });
 
 #[embassy_executor::task]
@@ -101,7 +105,7 @@ async fn main(_spawner: Spawner) {
     let board = new_daisy_board!(p);
     let interface = board
         .audio_peripherals
-        .prepare_interface(Default::default())
+        .prepare_interface(Default::default(), Irqs)
         .await;
     let sdram = board.sdram.build(&mut c.MPU, &mut c.SCB);
 
