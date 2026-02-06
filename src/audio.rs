@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 
 use crate::codec::{Codec, Pins as CodecPins};
 use defmt::info;
-use embassy_stm32::{self as hal, Peri, dma, interrupt};
+use embassy_stm32::{self as hal, Peri, bind_interrupts, dma};
 use grounded::uninit::GroundedArrayCell;
 
 use hal::sai::{self, MasterClockDivider};
@@ -22,49 +22,15 @@ static TX_BUFFER: GroundedArrayCell<u32, DMA_BUFFER_LENGTH> = GroundedArrayCell:
 #[unsafe(link_section = ".sram1_bss")]
 static RX_BUFFER: GroundedArrayCell<u32, DMA_BUFFER_LENGTH> = GroundedArrayCell::uninit();
 
+// - Interrupts ---------------------------------------------------------------
+bind_interrupts!(pub struct AudioIrqs{
+    DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
+    DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
+});
+
 // - types --------------------------------------------------------------------
 
 pub type InterleavedBlock = [u32; HALF_DMA_BUFFER_LENGTH];
-
-/// Auto-implemented trait for DMA interrupt bindings.
-///
-/// Generate with:
-/// ```no_run
-/// use embassy_stm32::bind_interrupts;
-/// bind_interrupts!(
-///     pub struct Irqs{
-///         DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
-///         DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
-///         DMA1_STREAM2 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH2>;
-/// });
-/// ```
-pub trait AudioIrqs:
-    interrupt::typelevel::Binding<
-        <hal::peripherals::DMA1_CH0 as dma::ChannelInstance>::Interrupt,
-        dma::InterruptHandler<hal::peripherals::DMA1_CH0>,
-    > + interrupt::typelevel::Binding<
-        <hal::peripherals::DMA1_CH1 as dma::ChannelInstance>::Interrupt,
-        dma::InterruptHandler<hal::peripherals::DMA1_CH1>,
-    > + interrupt::typelevel::Binding<
-        <hal::peripherals::DMA1_CH2 as dma::ChannelInstance>::Interrupt,
-        dma::InterruptHandler<hal::peripherals::DMA1_CH2>,
-    > + Copy
-{
-}
-
-impl<I> AudioIrqs for I where
-    I: interrupt::typelevel::Binding<
-            <hal::peripherals::DMA1_CH0 as dma::ChannelInstance>::Interrupt,
-            dma::InterruptHandler<hal::peripherals::DMA1_CH0>,
-        > + interrupt::typelevel::Binding<
-            <hal::peripherals::DMA1_CH1 as dma::ChannelInstance>::Interrupt,
-            dma::InterruptHandler<hal::peripherals::DMA1_CH1>,
-        > + interrupt::typelevel::Binding<
-            <hal::peripherals::DMA1_CH2 as dma::ChannelInstance>::Interrupt,
-            dma::InterruptHandler<hal::peripherals::DMA1_CH2>,
-        > + Copy
-{
-}
 
 /// `AudioPeripherals` is a builder to make `Interface` safely.
 /// It ensures the correct pin mappings and DMA regions for
@@ -79,7 +45,6 @@ pub struct AudioPeripherals<'a> {
     pub i2c2: Peri<'a, hal::peripherals::I2C2>,
     pub dma1_ch0: Peri<'a, hal::peripherals::DMA1_CH0>,
     pub dma1_ch1: Peri<'a, hal::peripherals::DMA1_CH1>,
-    pub dma1_ch2: Peri<'a, hal::peripherals::DMA1_CH2>,
 }
 
 impl<'a> AudioPeripherals<'a> {
@@ -96,11 +61,7 @@ impl<'a> AudioPeripherals<'a> {
     /// # Notes
     /// - This method is async because `seed_1_1` requires I2C communication with the WM8731 codec.
     /// - The board revision is selected via Cargo features (`seed_1_1`, `seed_1_2`).
-    pub async fn prepare_interface(
-        self,
-        audio_config: AudioConfig,
-        irq: impl AudioIrqs + 'a,
-    ) -> Interface<'a, Idle> {
+    pub async fn prepare_interface(self, audio_config: AudioConfig) -> Interface<'a, Idle> {
         let tx_buffer: &mut [u32] = unsafe {
             TX_BUFFER.initialize_all_copied(0);
             let (ptr, len) = TX_BUFFER.get_ptr_len();
@@ -114,7 +75,7 @@ impl<'a> AudioPeripherals<'a> {
         };
 
         Interface {
-            codec: Codec::new(self, audio_config, tx_buffer, rx_buffer, irq).await,
+            codec: Codec::new(self, audio_config, tx_buffer, rx_buffer).await,
             _state: PhantomData,
         }
     }

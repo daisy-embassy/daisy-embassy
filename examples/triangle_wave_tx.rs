@@ -7,18 +7,14 @@ use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, hal, new_daisy_board};
 use defmt::{debug, unwrap};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
-use embassy_stm32::{bind_interrupts, dma, exti, interrupt};
+use embassy_stm32::{bind_interrupts, exti, interrupt};
 use embassy_time::Timer;
 use hal::gpio::Pull;
 use hal::{exti::ExtiInput, gpio::Input};
 use {defmt_rtt as _, panic_probe as _};
 
-bind_interrupts!(
-    pub struct Irqs{
-        EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
-        DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
-        DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
-        DMA1_STREAM2 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH2>;
+bind_interrupts!(pub struct Irqs{
+    EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
 });
 
 #[derive(Clone, Copy)]
@@ -57,7 +53,7 @@ async fn main(_spawner: Spawner) {
     let board = new_daisy_board!(p);
     let interface = board
         .audio_peripherals
-        .prepare_interface(Default::default(), Irqs)
+        .prepare_interface(Default::default())
         .await;
 
     let mute;
