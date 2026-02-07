@@ -60,9 +60,10 @@ pub fn default_rcc() -> hal::Config {
         divr: Some(PllDiv::DIV2),  // 480MHz TRACECLK
     });
     config.rcc.pll2 = Some(Pll {
-        source: PllSource::HSE,   // 16Mhz
-        prediv: PllPreDiv::DIV4,  // 4Mhz
-        mul: PllMul::MUL125,      // 500Mhz
+        source: PllSource::HSE,  // 16Mhz
+        prediv: PllPreDiv::DIV4, // 4Mhz
+        mul: PllMul::MUL125,     // 500Mhz
+        // Note: ADC uses this source by default, but the datasheet advises against using an odd numbered divider
         divp: Some(PllDiv::DIV5), // 100Mhz
         divq: None,
         divr: Some(PllDiv::DIV3), // 166Mhz for FMC (SDRAM)
