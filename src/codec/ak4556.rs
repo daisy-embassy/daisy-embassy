@@ -24,12 +24,11 @@ pub struct Codec<'a> {
 }
 
 impl<'a> Codec<'a> {
-    pub async fn new<I: AudioIrqs + 'a>(
+    pub async fn new(
         p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
-        irqs: I,
     ) -> Self {
         info!("set up AK4556");
 
@@ -66,18 +65,18 @@ impl<'a> Codec<'a> {
             p.codec_pins.SD_A,
             p.codec_pins.FS_A,
             p.codec_pins.MCLK_A,
-            p.dma1_ch1,
+            p.dma1_ch0,
             tx_buffer,
-            irqs,
+            AudioIrqs,
             sai_tx_config,
         );
 
         let sai_rx = hal::sai::Sai::new_synchronous(
             sub_block_rx,
             p.codec_pins.SD_B,
-            p.dma1_ch2,
+            p.dma1_ch1,
             rx_buffer,
-            irqs,
+            AudioIrqs,
             sai_rx_config,
         );
 

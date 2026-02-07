@@ -102,9 +102,4 @@ path = "examples/looper.rs"
 [[example]]
 name = "usb_uac"
 path = "examples/_usb_uac.rs"
-[[example]]
-name = "_minimum_sai"
-path = "examples/_minimum_sai.rs"
-[[example]]
-name = "_minimum_flash"
-path = "examples/_minimum_flash.rs"
+

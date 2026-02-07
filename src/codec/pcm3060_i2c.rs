@@ -33,12 +33,11 @@ pub struct Codec<'a> {
 }
 
 impl<'a> Codec<'a> {
-    pub async fn new<I: AudioIrqs + 'a>(
+    pub async fn new(
         p: AudioPeripherals<'a>,
         audio_config: AudioConfig,
         tx_buffer: &'a mut [u32],
         rx_buffer: &'a mut [u32],
-        irqs: I,
     ) -> Self {
         info!("set up i2c");
         let mut i2c_config = hal::i2c::Config::default();
@@ -85,7 +84,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.SD_B,
             p.dma1_ch1,
             tx_buffer,
-            irqs,
+            AudioIrqs,
             sai_tx_config,
         );
 
@@ -97,7 +96,7 @@ impl<'a> Codec<'a> {
             p.codec_pins.MCLK_A,
             p.dma1_ch0,
             rx_buffer,
-            irqs,
+            AudioIrqs,
             sai_rx_config,
         );
 

@@ -10,16 +10,8 @@
 use daisy_embassy::{DaisyBoard, hal, led::UserLed, new_daisy_board};
 use defmt::{debug, unwrap};
 use embassy_executor::Spawner;
-use embassy_stm32::{bind_interrupts, dma};
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
-
-bind_interrupts!(
-    pub struct Irqs{
-        DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
-        DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
-        DMA1_STREAM2 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH2>;
-});
 
 #[embassy_executor::task]
 async fn blink(mut led: UserLed<'static>) {
@@ -45,7 +37,7 @@ async fn main(spawner: Spawner) {
 
     let interface = board
         .audio_peripherals
-        .prepare_interface(Default::default(), Irqs)
+        .prepare_interface(Default::default())
         .await;
 
     let mut interface = unwrap!(interface.start_interface().await);

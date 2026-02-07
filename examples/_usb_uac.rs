@@ -8,7 +8,7 @@ use daisy_embassy::audio::HALF_DMA_BUFFER_LENGTH;
 use defmt::{panic, *};
 use embassy_executor::Spawner;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::{bind_interrupts, dma, interrupt, peripherals, timer, usb};
+use embassy_stm32::{bind_interrupts, interrupt, peripherals, timer, usb};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::signal::Signal;
@@ -24,9 +24,6 @@ use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
     OTG_FS => usb::InterruptHandler<peripherals::USB_OTG_FS>;
-    DMA1_STREAM0 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH0>;
-    DMA1_STREAM1 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH1>;
-    DMA1_STREAM2 => dma::InterruptHandler<embassy_stm32::peripherals::DMA1_CH2>;
 });
 
 static TIMER: Mutex<
@@ -150,7 +147,7 @@ async fn audio_receiver_task(
     audio_p: daisy_embassy::audio::AudioPeripherals<'static>,
     mut usb_audio_receiver: zerocopy_channel::Receiver<'static, NoopRawMutex, SampleBlock>,
 ) {
-    let interface = audio_p.prepare_interface(Default::default(), Irqs).await;
+    let interface = audio_p.prepare_interface(Default::default()).await;
     let (mut sai_tx, mut sai_rx, _) = interface
         .setup_and_release()
         .await
