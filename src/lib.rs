@@ -52,33 +52,35 @@ pub fn default_rcc() -> hal::Config {
     let mut config = hal::Config::default();
     use hal::rcc::*;
     config.rcc.pll1 = Some(Pll {
-        source: PllSource::HSE,
-        prediv: PllPreDiv::DIV4,
-        mul: PllMul::MUL240,
-        divp: Some(PllDiv::DIV2),
-        divq: Some(PllDiv::DIV20),
-        divr: Some(PllDiv::DIV2),
+        source: PllSource::HSE,    // 16Mhz
+        prediv: PllPreDiv::DIV4,   // 4Mhz
+        mul: PllMul::MUL240,       // 960Mhz
+        divp: Some(PllDiv::DIV2),  // 480MHz for SYS clock
+        divq: Some(PllDiv::DIV20), // 48MHz for USB
+        divr: Some(PllDiv::DIV2),  // 480MHz TRACECLK
     });
     config.rcc.pll2 = Some(Pll {
-        source: PllSource::HSE,
-        prediv: PllPreDiv::DIV4,
-        mul: PllMul::MUL50,
-        divp: None,
+        source: PllSource::HSE,  // 16Mhz
+        prediv: PllPreDiv::DIV4, // 4Mhz
+        mul: PllMul::MUL125,     // 500Mhz
+        // Note: ADC uses this source by default, but the datasheet advises against using an odd numbered divider
+        divp: Some(PllDiv::DIV5), // 100Mhz
         divq: None,
-        divr: Some(PllDiv::DIV2),
+        divr: Some(PllDiv::DIV3), // 166Mhz for FMC (SDRAM)
     });
     config.rcc.pll3 = Some(Pll {
-        source: PllSource::HSE,
-        prediv: PllPreDiv::DIV6,
-        mul: PllMul::MUL295,
-        divp: Some(PllDiv::DIV16),
-        divq: Some(PllDiv::DIV4),
-        divr: Some(PllDiv::DIV32),
+        source: PllSource::HSE,    // 16Mhz
+        prediv: PllPreDiv::DIV6,   // 2.66Mhz
+        mul: PllMul::MUL295,       // 786.66Mhz
+        divp: Some(PllDiv::DIV16), // 49.2Mhz for for SAI
+        divq: Some(PllDiv::DIV4),  // 196.66Mhz
+        divr: Some(PllDiv::DIV8),  // 98.33Mhz for ADC
     });
     config.rcc.sys = Sysclk::PLL1_P; // 480MHz
-    config.rcc.mux.fmcsel = hal::pac::rcc::vals::Fmcsel::PLL2_R; // 100MHz
+    config.rcc.mux.fmcsel = hal::pac::rcc::vals::Fmcsel::PLL2_R; //  166Mhz
     config.rcc.mux.sai1sel = hal::pac::rcc::vals::Saisel::PLL3_P; // 49.2MHz
     config.rcc.mux.usbsel = hal::pac::rcc::vals::Usbsel::PLL1_Q; // 48MHz
+    config.rcc.mux.adcsel = hal::pac::rcc::vals::Adcsel::PLL3_R; // 98.33Mhz 
     config.rcc.ahb_pre = AHBPrescaler::DIV2; // 240 MHz
     config.rcc.apb1_pre = APBPrescaler::DIV2; // 120 MHz
     config.rcc.apb2_pre = APBPrescaler::DIV2; // 120 MHz
