@@ -16,9 +16,6 @@ This is a small, collaborative project maintained by a few developers. We aim to
 - **It helps a lot if you drop a quick note before starting to write code.**  
   Especially for large changes or new APIs, it's great to align on direction beforehand.
 
-- **Please target your PRs to the `develop` branch.**  
-  The `main` branch is reserved for stable releases.
-
 - **Use `cargo fmt` for code formatting.**  
   This helps keep diffs clean and consistent.
 
@@ -26,8 +23,10 @@ This is a small, collaborative project maintained by a few developers. We aim to
 
 ```bash
   cargo fmt -- --check
+  cargo clippy --no-default-features --features seed -- --deny=warnings
   cargo clippy --no-default-features --features seed_1_1 -- --deny=warnings
   cargo clippy --no-default-features --features seed_1_2 -- --deny=warnings
+  cargo clippy --no-default-features --features patch_sm -- --deny=warnings
 ```
 
 Please make sure your code passes these checks. If you're having trouble, feel free to mention it.

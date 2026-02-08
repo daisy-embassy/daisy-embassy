@@ -96,6 +96,7 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
    ```
 
 2. **Identify Your Board**:
+   - Daisy Seed (AK4556): Use `--features=seed --no-default-features`.
    - Daisy Seed Rev5 (WM8731): Default, no extra flags.
    - Daisy Seed Rev7 (PCM3060): Use `--features=seed_1_2 --no-default-features`.
    - Daisy Patch SM: Use `--features=patch_sm --no-default-features`.
