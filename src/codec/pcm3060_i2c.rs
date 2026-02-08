@@ -63,7 +63,7 @@ impl<'a> Codec<'a> {
         sai_rx_config.stereo_mono = sai::StereoMono::Stereo;
         sai_rx_config.data_size = sai::DataSize::Data24;
         sai_rx_config.bit_order = sai::BitOrder::MsbFirst;
-        sai_rx_config.frame_sync_polarity = sai::FrameSyncPolarity::ActiveHigh;
+        sai_rx_config.frame_sync_polarity = sai::FrameSyncPolarity::ActiveLow;
         sai_rx_config.frame_sync_offset = sai::FrameSyncOffset::OnFirstBit;
         sai_rx_config.frame_length = 64;
         sai_rx_config.frame_sync_active_level_length = sai::word::U7(32);
@@ -77,6 +77,7 @@ impl<'a> Codec<'a> {
         sai_tx_config.tx_rx = sai::TxRx::Transmitter;
         sai_tx_config.sync_input = sai::SyncInput::Internal;
         sai_tx_config.clock_strobe = sai::ClockStrobe::Rising;
+        sai_rx_config.frame_sync_polarity = sai::FrameSyncPolarity::ActiveHigh;
         sai_tx_config.sync_output = false;
 
         let sai_tx = hal::sai::Sai::new_synchronous(
