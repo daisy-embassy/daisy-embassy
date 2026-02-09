@@ -96,25 +96,25 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
    ```
 
 2. **Identify Your Board**:
-   - Daisy Seed (AK4556): Use `--features=seed --no-default-features`.
-   - Daisy Seed Rev5 (WM8731): Default, no extra flags.
-   - Daisy Seed Rev7 (PCM3060): Use `--features=seed_1_2 --no-default-features`.
-   - Daisy Patch SM: Use `--features=patch_sm --no-default-features`.
+   - Daisy Seed (AK4556): Use `--features=seed`.
+   - Daisy Seed Rev5 (WM8731): `--features=seed_1_1`.
+   - Daisy Seed Rev7 (PCM3060): Use `--features=seed_1_2`.
+   - Daisy Patch SM: Use `--features=patch_sm`.
 
 3. **Run an Example**:
 
    ```bash
-   # Rev4: Passthrough example
-   cargo run --example passthrough --features=seed --no-default-features --release
+   # Rev4(AK4556): Passthrough example
+   cargo run --example passthrough --features=seed --release
 
-   # Rev5: Blinky example
-   cargo run --example blinky --release
+   # Rev5(WM8731): Blinky example
+   cargo run --example blinky --features=seed_1_1 --release
 
-   # Rev7: Triangle wave example
-   cargo run --example triangle_wave_tx --features=seed_1_2 --no-default-features --release
+   # Rev7(PCM3060): Triangle wave example
+   cargo run --example triangle_wave_tx --features=seed_1_2 --release
 
    # Path SM: looper example
-   cargo run --example looper --features=patch_sm --no-default-features --release
+   cargo run --example looper --features=patch_sm --release
    ```
 
 4. **Build and Customize**:
@@ -122,6 +122,22 @@ See the `examples/` directory for more demos, such as `blinky.rs` or `triangle_w
    - Modify examples to create custom audio applications.
    - Debug issues using probe-rs logs.
    - When you find a bug, need help, or have suggestions, open an [Issue](https://github.com/daisy-embassy/daisy-embassy/issues).
+
+---
+
+## Development Setup
+
+### IDE Configuration
+
+This crate uses feature flags to gate board-specific code. When developing in an IDE, you must configure rust-analyzer to enable the appropriate feature flag for your board, otherwise you may encounter compilation errors.
+
+**For VS Code**: See `.vscode/settings.json` for an example configuration. Uncomment the feature flag corresponding to your board.
+
+**For Other Editors**: Refer to the VS Code settings as a template and configure your editor accordingly to enable the appropriate feature flag:
+- Daisy Seed (AK4556): `seed`
+- Daisy Seed Rev5 (WM8731): `seed_1_1`
+- Daisy Seed Rev7 (PCM3060): `seed_1_2`
+- Daisy Patch SM: `patch_sm`
 
 ---
 

@@ -23,10 +23,10 @@ This is a small, collaborative project maintained by a few developers. We aim to
 
 ```bash
   cargo fmt -- --check
-  cargo clippy --no-default-features --features seed -- --deny=warnings
-  cargo clippy --no-default-features --features seed_1_1 -- --deny=warnings
-  cargo clippy --no-default-features --features seed_1_2 -- --deny=warnings
-  cargo clippy --no-default-features --features patch_sm -- --deny=warnings
+  cargo clippy --features seed -- --deny=warnings
+  cargo clippy --features seed_1_1 -- --deny=warnings
+  cargo clippy --features seed_1_2 -- --deny=warnings
+  cargo clippy --features patch_sm -- --deny=warnings
 ```
 
 Please make sure your code passes these checks. If you're having trouble, feel free to mention it.

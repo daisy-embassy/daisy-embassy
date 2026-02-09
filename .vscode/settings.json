@@ -2,5 +2,13 @@
     "[rust]": {
         "editor.formatOnSave": true
     },
+    "rust-analyzer.cargo.features": [
+        // Choose your board: uncomment exactly one of the following.
+        // Make sure your change here does NOT get committed😉
+        // "seed",
+        // "seed_1_1",
+        // "seed_1_2",
+        // "patch_sm",
+    ],
     "rust-analyzer.check.allTargets": false,
 }

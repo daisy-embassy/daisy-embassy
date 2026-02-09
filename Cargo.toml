@@ -43,8 +43,6 @@ heapless = { version = "0.8", default-features = false }
 micromath = "2.0.0"
 
 [features]
-default = ["seed_1_1"]
-
 seed = []
 seed_1_1 = []
 seed_1_2 = []
