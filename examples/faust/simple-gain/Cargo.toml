@@ -1,0 +1,63 @@
+[package]
+edition = "2024"
+name    = "daisy"
+
+
+[features]
+default = []
+std     = []
+
+[dependencies]
+blech = { git = "https://codeberg.org/crop/blech.git", default-features = false }
+# faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
+# faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
+
+cortex-m-rt   = { version = "0.7.0", features = ["device"] }
+daisy-embassy = { git = "https://github.com/daisy-embassy/daisy-embassy.git", rev = "4af609f104e28791a75ed86b87c0f778b6b2cb54" }
+defmt         = "1.0.1"
+libm          = "0.2.16"
+
+num-traits = { version = "0.2.19", default-features = false, features = [
+  "libm",
+] }
+strum = { version = "*", default-features = false, features = [
+  "derive",
+], git = "https://github.com/Peternator7/strum" }
+
+embassy-executor = { version = "0.7.0", features = [
+  "arch-cortex-m",
+  "defmt",
+  "executor-interrupt",
+  "executor-thread",
+  "task-arena-size-32768",
+] }
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
+embassy-time = { version = "0.4.0" }
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+defmt-rtt = "1.0.0"
+cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
+
+[build-dependencies]
+# faust-build    = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e" }
+# faust-ui-build = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e" }
+quote          = "*"
+
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false
+
+# cargo build/run
+[profile.dev]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 3
+overflow-checks = true
