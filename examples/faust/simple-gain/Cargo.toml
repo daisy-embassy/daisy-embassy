@@ -8,9 +8,8 @@ default = []
 std     = []
 
 [dependencies]
-blech = { git = "https://codeberg.org/crop/blech.git", default-features = false }
-# faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
-# faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
+faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
+faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
 
 cortex-m-rt   = { version = "0.7.0", features = ["device"] }
 daisy-embassy = { git = "https://github.com/daisy-embassy/daisy-embassy.git", rev = "4af609f104e28791a75ed86b87c0f778b6b2cb54" }
