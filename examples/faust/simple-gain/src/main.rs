@@ -49,9 +49,10 @@ async fn handle_gain_button(mut change_gain: ExtiInput<'static, Async>) {
     let mut current_index = 0;
     loop {
         change_gain.wait_for_low().await;
-        defmt::info!("gain button pressed");
         current_index = (current_index + 1) % 10;
-        SHARED_VOLUME.signal(GAINS[current_index]);
+        let value = GAINS[current_index];
+        defmt::info!("gain button pressed. value: {}", value);
+        SHARED_VOLUME.signal(value);
         Timer::after_millis(300).await;
     }
 }
