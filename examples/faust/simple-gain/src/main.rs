@@ -11,7 +11,7 @@ use core::{array::from_fn, num::Wrapping};
 use daisy_embassy::{
     DaisyBoard,
     audio::HALF_DMA_BUFFER_LENGTH,
-    hal::{self, bind_interrupts, exti::ExtiInput, gpio::Pull, interrupt},
+    hal::{self, bind_interrupts, exti::ExtiInput, gpio::Pull, interrupt, mode::Async},
     led::UserLed,
     new_daisy_board,
 };
@@ -43,7 +43,7 @@ async fn blink(mut led: UserLed<'static>) {
 }
 
 #[embassy_executor::task]
-async fn handle_gain_button(mut change_gain: ExtiInput<'static>) {
+async fn handle_gain_button(mut change_gain: ExtiInput<'static, Async>) {
     SHARED_VOLUME.signal(1.0);
     const GAINS: [f32; 10] = [1.0, 0.8, 0.4, 0.2, 0.1, 0.0, 0.1, 0.2, 0.4, 0.8];
     let mut current_index = 0;

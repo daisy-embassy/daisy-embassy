@@ -11,7 +11,7 @@ faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf2
 faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf26924968b6a1f70d0b7c1443adeb68", default-features = false }
 
 cortex-m-rt   = { version = "0.7.0", features = ["device"] }
-daisy-embassy = { git = "https://github.com/daisy-embassy/daisy-embassy.git", rev = "4af609f104e28791a75ed86b87c0f778b6b2cb54" }
+daisy-embassy = { path = "../../../../daisy-embassy", features = ["seed_1_1"] }
 defmt         = "1.0.1"
 libm          = "0.2.16"
 
@@ -30,7 +30,7 @@ embassy-executor = { version = "0.7.0", features = [
   "task-arena-size-32768",
 ] }
 embassy-sync = { version = "0.7.2", features = ["defmt"] }
-embassy-time = { version = "0.4.0" }
+embassy-time = { version = "0.5.0" }
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
 defmt-rtt = "1.0.0"
@@ -41,6 +41,13 @@ faust-build    = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aa
 faust-ui-build = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf26924968b6a1f70d0b7c1443adeb68" }
 quote          = "*"
 
+
+[patch.crates-io]
+embassy-stm32 = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
+embassy-usb = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
 
 [profile.release]
 codegen-units = 1
