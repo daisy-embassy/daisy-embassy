@@ -1,13 +1,18 @@
 [target.thumbv7em-none-eabihf]
 runner = 'probe-rs run --chip STM32H750IBKx'
-rustflags = [
-  # --- KEEP existing `link-arg` flags ---
-  "-C", "link-arg=-Tlink.x",
-  "-C", "link-arg=--nmagic",
 
-  # --- ADD following new flag ---
-  "-C", "link-arg=-Tdefmt.x",
-]
+# Note: rustflags is already defined in the parent daisy-embassy/.cargo/config.toml.
+# Cargo concatenates rustflags arrays from hierarchical configs, so defining
+# them here too would cause duplicate linker arguments (-Tlink.x etc.) and
+# a "region 'FLASH' already defined" linker error.
+# rustflags = [
+#   # --- KEEP existing `link-arg` flags ---
+#   "-C", "link-arg=-Tlink.x",
+#   "-C", "link-arg=--nmagic",
+
+#   # --- ADD following new flag ---
+#   "-C", "link-arg=-Tdefmt.x",
+# ]
 
 [build]
 target = "thumbv7em-none-eabihf" # Cortex-M4F and Cortex-M7F (with FPU)
