@@ -1,4 +1,9 @@
 // Gain example with faust
+// The basic behavior is the same as the "passthrough" example, but provides a demo of driving
+// a gain control created with FAUST.
+// Connect a tactile switch or similar to the D16 pin, making it go LOW when pressed.
+// Each time the button is pressed, the audio being passed through should gradually get quieter
+// or gradually get louder.
 
 #![no_std]
 #![no_main]
