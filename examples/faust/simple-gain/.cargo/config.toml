@@ -19,4 +19,7 @@ target = "thumbv7em-none-eabihf" # Cortex-M4F and Cortex-M7F (with FPU)
 
 [env]
 DEFMT_LOG = "trace"
+# Set a default FAUST_PATH if not already defined in environment.
+# This prevents rust-analyzer and IDE analysis from failing.
+# FAUST_PATH = "/path/to/faust"
 
