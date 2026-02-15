@@ -1,2 +1,4 @@
 /target
 Cargo.lock
+/src/faust.dsp.json
+/src/dsp.rs

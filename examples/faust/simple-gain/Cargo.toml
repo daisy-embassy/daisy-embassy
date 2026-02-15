@@ -2,14 +2,13 @@
 edition = "2024"
 name    = "daisy"
 
-
 [features]
 default = []
 std     = []
 
 [dependencies]
-faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
-faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e", default-features = false }
+faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf26924968b6a1f70d0b7c1443adeb68", default-features = false }
+faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf26924968b6a1f70d0b7c1443adeb68", default-features = false }
 
 cortex-m-rt   = { version = "0.7.0", features = ["device"] }
 daisy-embassy = { git = "https://github.com/daisy-embassy/daisy-embassy.git", rev = "4af609f104e28791a75ed86b87c0f778b6b2cb54" }
@@ -38,8 +37,8 @@ defmt-rtt = "1.0.0"
 cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
 
 [build-dependencies]
-# faust-build    = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e" }
-# faust-ui-build = { git = "https://codeberg.org/crop/blech.git", rev = "d0544b71c33b327f8b0f2feb5780da9e49c9348e" }
+faust-build    = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf26924968b6a1f70d0b7c1443adeb68" }
+faust-ui-build = { git = "https://codeberg.org/crop/blech.git", rev = "0b16d40aaf26924968b6a1f70d0b7c1443adeb68" }
 quote          = "*"
 
 
