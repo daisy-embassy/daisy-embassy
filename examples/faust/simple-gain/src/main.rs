@@ -4,7 +4,11 @@
 #![no_main]
 use core::{array::from_fn, num::Wrapping};
 use daisy_embassy::{
-    DaisyBoard, audio::HALF_DMA_BUFFER_LENGTH, hal, led::UserLed, new_daisy_board,
+    DaisyBoard,
+    audio::HALF_DMA_BUFFER_LENGTH,
+    hal::{self, bind_interrupts, exti::ExtiInput, gpio::Pull, interrupt},
+    led::UserLed,
+    new_daisy_board,
 };
 use defmt::{debug, unwrap};
 use defmt_rtt as _;
@@ -13,14 +17,16 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal}
 use embassy_time::Timer;
 use faust_ui::{UIRange, UISetAny};
 use panic_probe as _;
-
 mod dsp;
 
 static SHARED_VOLUME: Signal<CriticalSectionRawMutex, f32> = Signal::new();
 
+bind_interrupts!(pub struct Irqs{
+    EXTI3 => hal::exti::InterruptHandler<interrupt::typelevel::EXTI3>;
+});
+
 #[embassy_executor::task]
 async fn blink(mut led: UserLed<'static>) {
-    let mut volume = 0.01;
     // Blink LED while audio passthrough to show sign of life
     loop {
         led.on();
@@ -28,14 +34,20 @@ async fn blink(mut led: UserLed<'static>) {
 
         led.off();
         Timer::after_millis(500).await;
+    }
+}
 
-        if volume <= 0.5 {
-            volume *= 2.0;
-        } else {
-            volume = 0.01;
-        }
-
-        SHARED_VOLUME.signal(volume);
+#[embassy_executor::task]
+async fn handle_gain_button(mut change_gain: ExtiInput<'static>) {
+    SHARED_VOLUME.signal(1.0);
+    const GAINS: [f32; 10] = [1.0, 0.8, 0.4, 0.2, 0.1, 0.0, 0.1, 0.2, 0.4, 0.8];
+    let mut current_index = 0;
+    loop {
+        change_gain.wait_for_low().await;
+        defmt::info!("gain button pressed");
+        current_index = (current_index + 1) % 10;
+        SHARED_VOLUME.signal(GAINS[current_index]);
+        Timer::after_millis(300).await;
     }
 }
 
@@ -48,6 +60,14 @@ async fn main(spawner: Spawner) {
 
     let led = board.user_led;
     spawner.spawn(blink(led)).unwrap();
+    spawner
+        .spawn(handle_gain_button(ExtiInput::new(
+            board.pins.d16,
+            p.EXTI3,
+            Pull::Up,
+            Irqs,
+        )))
+        .unwrap();
 
     let interface = board
         .audio_peripherals
