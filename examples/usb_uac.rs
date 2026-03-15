@@ -2,6 +2,7 @@
 #![no_main]
 
 use core::cell::RefCell;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use daisy_embassy::audio::{Idle, Interface};
 use daisy_embassy::led::UserLed;
@@ -9,12 +10,11 @@ use defmt::{panic, *};
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::{bind_interrupts, interrupt, pac, peripherals, timer, usb};
+use embassy_stm32::{bind_interrupts, interrupt, peripherals, timer, usb};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel;
 use embassy_sync::signal::Signal;
-use embassy_time::{Duration, WithTimeout};
 use embassy_usb::class::uac1;
 use embassy_usb::class::uac1::speaker::{self, Speaker};
 use embassy_usb::driver::EndpointError;
@@ -42,6 +42,8 @@ pub const INPUT_CHANNEL_COUNT: usize = 2;
 
 // This example uses a fixed sample rate of 48 kHz.
 pub const SAMPLE_RATE_HZ: u32 = 48_000;
+
+// Counter update rate for the feedback value.
 pub const FEEDBACK_COUNTER_TICK_RATE: u32 = 48_000_000;
 
 // Use 32 bit samples, which allow for a lot of (software) volume adjustment without degradation of quality.
@@ -93,8 +95,6 @@ async fn feedback_handler<'d, T: usb::Instance + 'd>(
     // Collects the fractional component of the feedback value that is lost by rounding.
     let mut rest = 0.0_f32;
 
-    // Clear any existing FB value to make sure we don't start on the wrong frame
-    let _ = FEEDBACK_SIGNAL.try_take();
     loop {
         let counter = FEEDBACK_SIGNAL.wait().await;
 
@@ -109,18 +109,8 @@ async fn feedback_handler<'d, T: usb::Instance + 'd>(
         packet.push((value >> 8) as u8).unwrap();
         packet.push((value >> 16) as u8).unwrap();
 
-        let Ok(res) = feedback
-            .write_packet(&packet)
-            // Short timeout to prevent queueing
-            .with_timeout(Duration::from_micros(10))
-            .await
-        else {
-            // Ignore timeout. There was already an uncollected message in the FIFO.
-            // The previous message will be delivered next time the host polls for it
-            continue;
-        };
+        feedback.write_packet(&packet).await?;
 
-        res?; // Return on error
         debug!("feedback sent {}", value);
     }
 }
@@ -242,20 +232,23 @@ async fn usb_control_task(control_monitor: speaker::ControlMonitor<'static>) {
 /// requires wiring the MCLK output to the timer clock input.
 #[interrupt]
 fn TIM2() {
-    // Count up frames and emit a signal, when the refresh period is reached.
-    let regs = pac::USB_OTG_FS;
+    static FRAME_COUNT: AtomicUsize = AtomicUsize::new(0);
+
     critical_section::with(|cs| {
         let mut guard = TIMER.borrow(cs).borrow_mut();
         let timer = guard.as_mut().unwrap();
         if timer.get_input_interrupt(TIMER_CHANNEL) {
-            let frame_number = regs.dsts().read().fnsof();
-            // Send the signal one frame before the feedback will be requested
-            if (frame_number + 1) % FEEDBACK_REFRESH_PERIOD.frame_count() as u16 == 0 {
-                let ticks = timer.get_capture_value(TIMER_CHANNEL);
+            let ticks = timer.get_capture_value(TIMER_CHANNEL);
+
+            // Count up frames and emit a signal, when the refresh period is reached (here, every 8 ms).
+            let prev_count = FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
+            if (prev_count + 1) >= FEEDBACK_REFRESH_PERIOD.frame_count() {
+                FRAME_COUNT.store(0, Ordering::Relaxed);
                 FEEDBACK_SIGNAL.signal(ticks);
             }
+            // Clear trigger interrupt flag.
             timer.clear_input_interrupt(TIMER_CHANNEL);
-        }
+        };
     });
 }
 // If you are trying this and your USB device doesn't connect, the most
@@ -381,12 +374,12 @@ async fn main(spawner: Spawner) {
     }
 
     // Launch USB audio tasks.
-    unwrap!(spawner.spawn(usb_control_task(control_monitor)));
-    unwrap!(spawner.spawn(usb_streaming_task(stream, sender)));
-    unwrap!(spawner.spawn(usb_feedback_task(feedback)));
-    unwrap!(spawner.spawn(usb_task(usb_device)));
-    unwrap!(spawner.spawn(audio_receiver_task(interface, receiver, board.user_led)));
-    unwrap!(spawner.spawn(background_task()));
+    defmt::unwrap!(spawner.spawn(usb_control_task(control_monitor)));
+    defmt::unwrap!(spawner.spawn(usb_streaming_task(stream, sender)));
+    defmt::unwrap!(spawner.spawn(usb_feedback_task(feedback)));
+    defmt::unwrap!(spawner.spawn(usb_task(usb_device)));
+    defmt::unwrap!(spawner.spawn(audio_receiver_task(interface, receiver, board.user_led)));
+    defmt::unwrap!(spawner.spawn(background_task()));
 }
 
 #[embassy_executor::task]
