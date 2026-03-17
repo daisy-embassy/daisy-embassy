@@ -69,12 +69,12 @@ pub fn default_rcc() -> hal::Config {
         divr: Some(PllDiv::DIV3), // 166Mhz for FMC (SDRAM)
     });
     config.rcc.pll3 = Some(Pll {
-        source: PllSource::HSE,    // 16Mhz
-        prediv: PllPreDiv::DIV6,   // 2.66Mhz
-        mul: PllMul::MUL295,       // 786.66Mhz
-        divp: Some(PllDiv::DIV16), // 49.2Mhz for for SAI
-        divq: Some(PllDiv::DIV4),  // 196.66Mhz
-        divr: Some(PllDiv::DIV8),  // 98.33Mhz for ADC
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV25, // 640Khz
+        mul: PllMul::MUL384,      // 245.76Mhz
+        divp: Some(PllDiv::DIV5), // 49.152 Mhz for for SAI
+        divq: None,
+        divr: Some(PllDiv::DIV3), // 81.92 Mhz
     });
     config.rcc.sys = Sysclk::PLL1_P; // 480MHz
     config.rcc.mux.fmcsel = hal::pac::rcc::vals::Fmcsel::PLL2_R; //  166Mhz
@@ -87,6 +87,7 @@ pub fn default_rcc() -> hal::Config {
     config.rcc.apb3_pre = APBPrescaler::DIV2; // 120 MHz
     config.rcc.apb4_pre = APBPrescaler::DIV2; // 120 MHz
     config.rcc.voltage_scale = VoltageScale::Scale0;
+
     config.rcc.hse = Some(Hse {
         freq: hal::time::Hertz::mhz(16),
         mode: HseMode::Oscillator,

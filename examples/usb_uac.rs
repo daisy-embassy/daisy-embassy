@@ -2,18 +2,19 @@
 #![no_main]
 
 use core::cell::RefCell;
-use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
-use daisy_embassy::audio::HALF_DMA_BUFFER_LENGTH;
+use daisy_embassy::audio::{Idle, Interface};
+use daisy_embassy::led::UserLed;
 use defmt::{panic, *};
 use embassy_executor::Spawner;
+use embassy_futures::yield_now;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::{bind_interrupts, interrupt, peripherals, timer, usb};
 use embassy_sync::blocking_mutex::Mutex;
-use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel;
 use embassy_sync::signal::Signal;
-use embassy_sync::zerocopy_channel;
-use embassy_time::{Duration, WithTimeout};
 use embassy_usb::class::uac1;
 use embassy_usb::class::uac1::speaker::{self, Speaker};
 use embassy_usb::driver::EndpointError;
@@ -26,6 +27,7 @@ bind_interrupts!(struct Irqs {
     OTG_FS => usb::InterruptHandler<peripherals::USB_OTG_FS>;
 });
 
+const TIMER_CHANNEL: timer::Channel = timer::Channel::Ch1;
 static TIMER: Mutex<
     CriticalSectionRawMutex,
     RefCell<Option<timer::low_level::Timer<peripherals::TIM2>>>,
@@ -40,7 +42,9 @@ pub const INPUT_CHANNEL_COUNT: usize = 2;
 
 // This example uses a fixed sample rate of 48 kHz.
 pub const SAMPLE_RATE_HZ: u32 = 48_000;
-pub const FEEDBACK_COUNTER_TICK_RATE: u32 = 42_000_000;
+
+// Counter update rate for the feedback value.
+pub const FEEDBACK_COUNTER_TICK_RATE: u32 = 48_000_000;
 
 // Use 32 bit samples, which allow for a lot of (software) volume adjustment without degradation of quality.
 pub const SAMPLE_WIDTH: uac1::SampleWidth = uac1::SampleWidth::Width4Byte;
@@ -59,15 +63,13 @@ pub const AUDIO_CHANNELS: [uac1::Channel; INPUT_CHANNEL_COUNT] =
 pub const USB_MAX_PACKET_SIZE: usize = 2 * USB_FRAME_SIZE;
 pub const USB_MAX_SAMPLE_COUNT: usize = USB_MAX_PACKET_SIZE / SAMPLE_SIZE;
 
-// The data type that is exchanged via the zero-copy channel (a sample vector).
-pub type SampleBlock = Vec<u32, USB_MAX_SAMPLE_COUNT>;
-
 // Feedback is provided in 10.14 format for full-speed endpoints.
 pub const FEEDBACK_REFRESH_PERIOD: uac1::FeedbackRefresh = uac1::FeedbackRefresh::Period8Frames;
 const FEEDBACK_SHIFT: usize = 14;
 
 const TICKS_PER_SAMPLE: f32 = (FEEDBACK_COUNTER_TICK_RATE as f32) / (SAMPLE_RATE_HZ as f32);
 
+const AUDIO_BUFF_SIZE: usize = USB_FRAME_SIZE * 4;
 struct Disconnected {}
 
 impl From<EndpointError> for Disconnected {
@@ -90,53 +92,50 @@ async fn feedback_handler<'d, T: usb::Instance + 'd>(
 ) -> Result<(), Disconnected> {
     let mut packet: Vec<u8, 4> = Vec::new();
 
+    // Collects the fractional component of the feedback value that is lost by rounding.
+    let mut rest = 0.0_f32;
+
     loop {
         let counter = FEEDBACK_SIGNAL.wait().await;
 
         packet.clear();
 
-        let value = (counter as f32 * feedback_factor).round() as u32;
+        let raw_value = counter as f32 * feedback_factor + rest;
+        let value = raw_value.round();
+        rest = raw_value - value;
 
+        let value = value as u32;
         packet.push(value as u8).unwrap();
         packet.push((value >> 8) as u8).unwrap();
         packet.push((value >> 16) as u8).unwrap();
 
         feedback.write_packet(&packet).await?;
+
+        debug!("feedback sent {}", value);
     }
 }
 
 /// Handles streaming of audio data from the host.
 async fn stream_handler<'d, T: usb::Instance + 'd>(
     stream: &mut speaker::Stream<'d, usb::Driver<'d, T>>,
-    sender: &mut zerocopy_channel::Sender<'static, NoopRawMutex, SampleBlock>,
+    sender: &mut channel::Sender<'static, CriticalSectionRawMutex, i32, AUDIO_BUFF_SIZE>,
 ) -> Result<(), Disconnected> {
-    info!("num audio block smp: {}", USB_MAX_SAMPLE_COUNT);
+    info!("stream handler started");
+
     loop {
         let mut usb_data = [0u8; USB_MAX_PACKET_SIZE];
         let data_size = stream.read_packet(&mut usb_data).await?;
 
         let word_count = data_size / SAMPLE_SIZE;
 
-        if word_count * SAMPLE_SIZE == data_size {
-            // Obtain a buffer from the channel
-            let samples = sender.send().await;
-            samples.clear();
-
-            for w in 0..word_count {
-                let byte_offset = w * SAMPLE_SIZE;
-                let sample = u32::from_le_bytes(
-                    usb_data[byte_offset..byte_offset + SAMPLE_SIZE]
-                        .try_into()
-                        .unwrap(),
-                );
-
-                // Fill the sample buffer with data.
-                samples.push(sample).unwrap();
-            }
-
-            sender.send_done();
-        } else {
-            debug!("Invalid USB buffer size of {}, skipped.", data_size);
+        for sample in usb_data
+            .as_chunks::<SAMPLE_SIZE>()
+            .0
+            .into_iter()
+            .map(|s| i32::from_le_bytes(*s))
+            .take(word_count)
+        {
+            sender.send(sample).await;
         }
     }
 }
@@ -144,41 +143,28 @@ async fn stream_handler<'d, T: usb::Instance + 'd>(
 /// Receives audio samples from the USB streaming task and can play them back.
 #[embassy_executor::task]
 async fn audio_receiver_task(
-    audio_p: daisy_embassy::audio::AudioPeripherals<'static>,
-    mut usb_audio_receiver: zerocopy_channel::Receiver<'static, NoopRawMutex, SampleBlock>,
+    interface: Interface<'static, Idle>,
+    receiver: channel::Receiver<'static, CriticalSectionRawMutex, i32, AUDIO_BUFF_SIZE>,
+    mut led: UserLed<'static>,
 ) {
-    let interface = audio_p.prepare_interface(Default::default()).await;
-    let (mut sai_tx, mut sai_rx, _) = interface
-        .setup_and_release()
-        .await
-        .expect("sai setup error");
-    let mut queue = heapless::Vec::<u32, { USB_MAX_SAMPLE_COUNT * 16 }>::new();
+    let mut interface = unwrap!(interface.start_interface().await);
 
     loop {
-        let mut read_buf = [0; HALF_DMA_BUFFER_LENGTH];
-        let mut write_buf = [0; HALF_DMA_BUFFER_LENGTH];
-        let _ = sai_rx.read(&mut read_buf).await; //discard received
+        let Err(e) = interface
+            .start_callback(|_input, output| {
+                led.off();
+                for os in output.iter_mut() {
+                    let sample = receiver.try_receive().unwrap_or_else(|_| {
+                        // Buffer Underrun!
+                        led.on();
+                        Default::default()
+                    });
+                    *os = (sample >> 8) as u32;
+                }
+            })
+            .await;
 
-        if let Ok(samples) = usb_audio_receiver
-            .receive()
-            .with_timeout(Duration::from_micros(500))
-            .await
-        {
-            for smp in samples.iter() {
-                //compress to 24bit
-                let smp = smp >> 8;
-                defmt::unwrap!(queue.push(smp));
-            }
-            usb_audio_receiver.receive_done();
-        }
-        for buf in write_buf.iter_mut() {
-            if let Some(smp) = queue.pop() {
-                *buf = smp;
-            }
-        }
-        if let Err(e) = sai_tx.write(&write_buf).await {
-            warn!("sai write error: {:?}", e);
-        }
+        error!("Audio Error {}", e);
     }
 }
 
@@ -186,7 +172,7 @@ async fn audio_receiver_task(
 #[embassy_executor::task]
 async fn usb_streaming_task(
     mut stream: speaker::Stream<'static, usb::Driver<'static, peripherals::USB_OTG_FS>>,
-    mut sender: zerocopy_channel::Sender<'static, NoopRawMutex, SampleBlock>,
+    mut sender: channel::Sender<'static, CriticalSectionRawMutex, i32, AUDIO_BUFF_SIZE>,
 ) {
     loop {
         stream.wait_connection().await;
@@ -199,8 +185,7 @@ async fn usb_streaming_task(
 async fn usb_feedback_task(
     mut feedback: speaker::Feedback<'static, usb::Driver<'static, peripherals::USB_OTG_FS>>,
 ) {
-    let feedback_factor = ((1 << FEEDBACK_SHIFT) as f32 / TICKS_PER_SAMPLE)
-        / 2.0_f32.powf(FEEDBACK_REFRESH_PERIOD as usize as f32);
+    let feedback_factor = (1 << FEEDBACK_SHIFT) as f32 / TICKS_PER_SAMPLE;
     info!("Using a feedback factor of {}.", feedback_factor);
 
     loop {
@@ -247,42 +232,25 @@ async fn usb_control_task(control_monitor: speaker::ControlMonitor<'static>) {
 /// requires wiring the MCLK output to the timer clock input.
 #[interrupt]
 fn TIM2() {
-    static LAST_TICKS: AtomicU32 = AtomicU32::new(0);
     static FRAME_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-    let ticks = critical_section::with(|cs| {
-        // Read timer counter.
-        let ticks = TIMER
-            .borrow(cs)
-            .borrow()
-            .as_ref()
-            .unwrap()
-            .regs_gp32()
-            .cnt()
-            .read();
+    critical_section::with(|cs| {
+        let mut guard = TIMER.borrow(cs).borrow_mut();
+        let timer = guard.as_mut().unwrap();
+        if timer.get_input_interrupt(TIMER_CHANNEL) {
+            let ticks = timer.get_capture_value(TIMER_CHANNEL);
 
-        // Clear trigger interrupt flag.
-        TIMER
-            .borrow(cs)
-            .borrow_mut()
-            .as_mut()
-            .unwrap()
-            .regs_gp32()
-            .sr()
-            .modify(|r| r.set_tif(false));
-
-        ticks
+            // Count up frames and emit a signal, when the refresh period is reached (here, every 8 ms).
+            let prev_count = FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
+            if (prev_count + 1) >= FEEDBACK_REFRESH_PERIOD.frame_count() {
+                FRAME_COUNT.store(0, Ordering::Relaxed);
+                FEEDBACK_SIGNAL.signal(ticks);
+            }
+            // Clear trigger interrupt flag.
+            timer.clear_input_interrupt(TIMER_CHANNEL);
+        };
     });
-    // Count up frames and emit a signal, when the refresh period is reached (here, every 8 ms).
-    let prev_count = FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
-    if (prev_count + 1) >= FEEDBACK_REFRESH_PERIOD.frame_count() {
-        FRAME_COUNT.store(0, Ordering::Relaxed);
-        let last_ticks = LAST_TICKS.load(Ordering::Relaxed);
-        FEEDBACK_SIGNAL.signal(ticks.wrapping_sub(last_ticks));
-        LAST_TICKS.store(ticks, Ordering::Relaxed);
-    }
 }
-
 // If you are trying this and your USB device doesn't connect, the most
 // common issues are the RCC config and vbus_detection
 //
@@ -294,6 +262,11 @@ async fn main(spawner: Spawner) {
     let config = daisy_embassy::default_rcc();
     let p = embassy_stm32::init(config);
     let board = daisy_embassy::new_daisy_board!(p);
+
+    let interface = board
+        .audio_peripherals
+        .prepare_interface(Default::default())
+        .await;
 
     // Configure all required buffers in a static way.
     debug!("USB packet size is {} byte", USB_MAX_PACKET_SIZE);
@@ -371,22 +344,26 @@ async fn main(spawner: Spawner) {
     // Create the USB device
     let usb_device = builder.build();
 
-    // Establish a zero-copy channel for transferring received audio samples between tasks
-    static SAMPLE_BLOCKS: StaticCell<[SampleBlock; 2]> = StaticCell::new();
-    let sample_blocks = SAMPLE_BLOCKS.init([Vec::new(), Vec::new()]);
-
-    static CHANNEL: StaticCell<zerocopy_channel::Channel<'_, NoopRawMutex, SampleBlock>> =
-        StaticCell::new();
-    let channel = CHANNEL.init(zerocopy_channel::Channel::new(sample_blocks));
-    let (sender, receiver) = channel.split();
+    static AUDIO_CHANNEL: StaticCell<
+        channel::Channel<CriticalSectionRawMutex, i32, AUDIO_BUFF_SIZE>,
+    > = StaticCell::new();
+    let channel = AUDIO_CHANNEL.init(channel::Channel::new());
+    let sender = channel.sender();
+    let receiver = channel.receiver();
 
     // Run a timer for counting between SOF interrupts.
     let mut tim2 = timer::low_level::Timer::new(p.TIM2);
     tim2.set_tick_freq(Hertz(FEEDBACK_COUNTER_TICK_RATE));
     //from RM0433 "Reference Manual" P.1682 Table338
     tim2.set_trigger_source(timer::low_level::TriggerSource::ITR6); // The USB SOF signal.
-    tim2.set_slave_mode(timer::low_level::SlaveMode::TRIGGER_MODE);
-    tim2.regs_gp16().dier().modify(|r| r.set_tie(true)); // Enable the trigger interrupt.
+    tim2.set_slave_mode(timer::low_level::SlaveMode::RESET_MODE);
+
+    tim2.set_input_ti_selection(TIMER_CHANNEL, timer::low_level::InputTISelection::TRC);
+    tim2.set_input_capture_prescaler(TIMER_CHANNEL, 0);
+    tim2.set_input_capture_filter(TIMER_CHANNEL, timer::low_level::FilterValue::FCK_INT_N8);
+    tim2.enable_channel(TIMER_CHANNEL, true);
+    tim2.enable_input_interrupt(TIMER_CHANNEL, true);
+
     tim2.start();
 
     TIMER.lock(|p| p.borrow_mut().replace(tim2));
@@ -397,9 +374,18 @@ async fn main(spawner: Spawner) {
     }
 
     // Launch USB audio tasks.
-    unwrap!(spawner.spawn(usb_control_task(control_monitor)));
-    unwrap!(spawner.spawn(usb_streaming_task(stream, sender)));
-    unwrap!(spawner.spawn(usb_feedback_task(feedback)));
-    unwrap!(spawner.spawn(usb_task(usb_device)));
-    unwrap!(spawner.spawn(audio_receiver_task(board.audio_peripherals, receiver)));
+    defmt::unwrap!(spawner.spawn(usb_control_task(control_monitor)));
+    defmt::unwrap!(spawner.spawn(usb_streaming_task(stream, sender)));
+    defmt::unwrap!(spawner.spawn(usb_feedback_task(feedback)));
+    defmt::unwrap!(spawner.spawn(usb_task(usb_device)));
+    defmt::unwrap!(spawner.spawn(audio_receiver_task(interface, receiver, board.user_led)));
+    defmt::unwrap!(spawner.spawn(background_task()));
+}
+
+#[embassy_executor::task]
+async fn background_task() {
+    loop {
+        // Spin-wait to keep the CPU from sleeping - which causes current noise
+        yield_now().await;
+    }
 }

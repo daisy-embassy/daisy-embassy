@@ -159,21 +159,6 @@ impl<'a> Interface<'a, Idle> {
             _state: PhantomData,
         })
     }
-
-    // returns (sai_tx, sai_rx, i2c)
-    #[cfg(any(feature = "seed_1_1", feature = "patch_sm"))]
-    pub async fn setup_and_release(
-        self,
-    ) -> Result<
-        (
-            sai::Sai<'a, hal::peripherals::SAI1, u32>,
-            sai::Sai<'a, hal::peripherals::SAI1, u32>,
-            hal::i2c::I2c<'a, hal::mode::Blocking, hal::i2c::Master>,
-        ),
-        sai::Error,
-    > {
-        self.start_interface().await.map(|i| i.codec.release())
-    }
 }
 
 impl Interface<'_, Running> {
