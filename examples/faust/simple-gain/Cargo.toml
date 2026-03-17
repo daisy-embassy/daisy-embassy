@@ -11,7 +11,11 @@ faust-traits = { git = "https://codeberg.org/crop/blech.git", rev = "1493f2f5da9
 faust-ui     = { git = "https://codeberg.org/crop/blech.git", rev = "1493f2f5da93ef0cbb2a05baf4bf281ad97674f6", default-features = false }
 
 cortex-m-rt   = { version = "0.7.0", features = ["device"] }
+
+# comment in the line that corresponds to your Daisy Seed revision
+# daisy-embassy = { path = "../../../../daisy-embassy", features = ["seed_1_2"], default-features = false }
 daisy-embassy = { path = "../../../../daisy-embassy", features = ["seed_1_1"] }
+
 defmt         = "1.0.1"
 libm          = "0.2.16"
 
@@ -47,7 +51,7 @@ embassy-stm32 = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa
 embassy-time = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
 embassy-sync = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
 embassy-futures = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
-embassy-usb = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
+#embassy-usb = { git = "https://github.com/embassy-rs/embassy.git", rev = "70aa65871e26f087e0baaf8e737371a4d5fd6d20" }
 
 [profile.release]
 codegen-units = 1

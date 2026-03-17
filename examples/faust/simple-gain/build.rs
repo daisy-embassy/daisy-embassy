@@ -17,9 +17,13 @@ fn main() {
     let mut b = file_with_ui("src/faust.dsp", "src/dsp.rs");
     b.set_code_option(CodeOption::NoFaustDsp);
     b.set_code_option(CodeOption::NoLibM);
+
+    // comment out these lines if faust is in your $PATH
+    // comment them in if you have the faust repo checked out and $FAUST_PATH set
     let faust_path = env::var("FAUST_PATH").expect("FAUST_PATH mut be set");
     b.set_faust_path(format!("{faust_path}/build/bin/faust"));
     b.set_import_dir(format!("{faust_path}/libraries/"));
+
     b.add_code_gen_fun(|_dsp_name| {
         quote::quote! {
             // use core::prelude::rust_2024::derive;
@@ -47,10 +51,10 @@ fn main() {
     // here, we ensure the build script is only re-run when
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
-    
+
     // Re-run if FAUST_PATH environment variable changes
     println!("cargo:rerun-if-env-changed=FAUST_PATH");
-    
+
     // Re-run if the Faust DSP source file changes
     println!("cargo:rerun-if-changed=src/faust.dsp");
 }

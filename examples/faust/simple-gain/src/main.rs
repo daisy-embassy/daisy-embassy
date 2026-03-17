@@ -7,10 +7,11 @@
 
 #![no_std]
 #![no_main]
+
 use core::{array::from_fn, num::Wrapping};
 use daisy_embassy::{
     DaisyBoard,
-    audio::HALF_DMA_BUFFER_LENGTH,
+    audio::BLOCK_LENGTH,
     hal::{self, bind_interrupts, exti::ExtiInput, gpio::Pull, interrupt, mode::Async},
     led::UserLed,
     new_daisy_board,
@@ -22,6 +23,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal}
 use embassy_time::Timer;
 use faust_ui::{UIRange, UISetAny};
 use panic_probe as _;
+
 mod dsp;
 
 static SHARED_VOLUME: Signal<CriticalSectionRawMutex, f32> = Signal::new();
@@ -94,19 +96,21 @@ async fn main(spawner: Spawner) {
 }
 
 fn process_audio_faust(dsp: &mut dsp::LpVol, input: &[u32], output: &mut [u32]) {
-    let ibuf: [[f32; 64]; dsp::FAUST_INPUTS] = from_fn(|_| from_fn(|i| u24_to_f32(input[i])));
-    let mut obuf: [[f32; 64]; dsp::FAUST_OUTPUTS] = from_fn(|_| [0.0_f32; HALF_DMA_BUFFER_LENGTH]);
+    let ibuf: [[f32; BLOCK_LENGTH]; dsp::FAUST_INPUTS] =
+        from_fn(|ch_idx| from_fn(|i| u24_to_f32(input[i * dsp::FAUST_INPUTS + ch_idx])));
+    let mut obuf: [[f32; BLOCK_LENGTH]; dsp::FAUST_OUTPUTS] =
+        [[0.0_f32; BLOCK_LENGTH]; dsp::FAUST_OUTPUTS];
 
-    // if a new value is recieved, set it.
-    // only checked once per buffer copy
     if let Some(volume) = SHARED_VOLUME.try_take() {
         dsp::UIActive::Gain.set(dsp, dsp::UIActive::Gain.map(volume));
     };
 
-    dsp.compute(HALF_DMA_BUFFER_LENGTH, &ibuf, &mut obuf);
+    dsp.compute(BLOCK_LENGTH, &ibuf, &mut obuf);
 
-    for (i, f32_value) in obuf[0].iter().enumerate() {
-        output[i] = f32_to_u24(*f32_value);
+    for ch_idx in 0..dsp::FAUST_OUTPUTS {
+        for i in 0..BLOCK_LENGTH {
+            output[i * dsp::FAUST_OUTPUTS + ch_idx] = f32_to_u24(obuf[ch_idx][i]);
+        }
     }
 }
 

@@ -12,7 +12,9 @@
    ```bash
    touch ./src/dsp.rs
    ```
-4. Set the `FAUST_PATH` environment variable.
+4. Set the `FAUST_PATH` environment variable. If faust (>= 2.84.3) is installed and in your $PATH then modify build.rs according to the comment.
+
+5. If you are using a version 1.2 daisy seed, update the feature in Cargo.toml (there is a comment).
 
 Once you run `cargo run --release`, the files `./src/dsp.rs` and `./src/faust.dsp.json` will be automatically generated. These are auto-generated files produced by `faust-build` and `faust-ui-build`, based on `./src/faust.dsp`.
 
